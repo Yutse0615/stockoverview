@@ -472,13 +472,22 @@
             }
         }
 
+        window.setConnectionStatus = function(online) {
+            const light = document.getElementById('connectionLight'); const text = document.getElementById('connectionText'); if (!light || !text) return;
+            if (online) { light.className = 'w-3 h-3 rounded-full bg-green-500'; text.textContent = 'Online'; text.className = 'text-xs font-bold text-green-600 dark:text-green-400'; }
+            else { light.className = 'w-3 h-3 rounded-full bg-gray-400'; text.textContent = 'Offline'; text.className = 'text-xs font-bold text-gray-500 dark:text-gray-400'; }
+        };
+
         async function authSuccess(uid, email, nickname) {
             window.currentUserUid = uid; window.currentUserName = nickname;
             document.getElementById('loginPage').style.display = 'none'; document.getElementById('registerPage').classList.add('hidden'); document.getElementById('mainApp').classList.remove('hidden'); document.getElementById('displayUsername').textContent = nickname;
-            await loadData(); initCharts(); document.getElementById('currencySelect').value = window.currentCurrency; window.changeLanguage(window.currentLang); 
+            window.setConnectionStatus(useCloud && navigator.onLine);
+            await loadData(); initCharts(); document.getElementById('currencySelect').value = window.currentCurrency; window.changeLanguage(window.currentLang);
         }
 
-        function authLogout() { window.currentUserUid = null; document.getElementById('registerPage').classList.add('hidden'); document.getElementById('loginPage').style.display = 'flex'; document.getElementById('mainApp').classList.add('hidden'); document.getElementById('authPassword').value = ''; window.destroyAllCharts(); }
+        function authLogout() { window.currentUserUid = null; window.setConnectionStatus(false); document.getElementById('registerPage').classList.add('hidden'); document.getElementById('loginPage').style.display = 'flex'; document.getElementById('mainApp').classList.add('hidden'); document.getElementById('authPassword').value = ''; window.destroyAllCharts(); }
+        window.addEventListener('online', () => { if (window.currentUserUid) window.setConnectionStatus(true); });
+        window.addEventListener('offline', () => window.setConnectionStatus(false));
         window.handleLogout = async function() { if (useCloud) await signOut(auth); else { localStorage.removeItem('currentUser'); sessionStorage.removeItem('currentUser'); authLogout(); } }
         // 把 Firebase 驗證錯誤碼轉成中文友善訊息
         function authErrorMsg(err) {
