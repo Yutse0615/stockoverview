@@ -205,12 +205,11 @@
                             <label class="text-sm font-bold text-gray-600 dark:text-gray-300">排序：</label>
                             <select id="sortBuySelect" class="h-[42px] px-2 border dark:border-gray-600 rounded text-sm bg-gray-50 dark:bg-gray-700 dark:text-white"><option value="default">預設 (新增順序)</option><option value="broker">券商分類</option><option value="date">日期 (新到舊)</option><option value="country">股票國家</option></select>
                         </div>
-                        <button id="refreshPricesBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-semibold h-[42px] px-4 rounded shadow">🔄 最新報價</button>
                     </div>
                 </div>
                 <table class="w-full text-left border-collapse min-w-[1000px]"><thead id="buyThead"></thead><tbody id="buyTableBody" class="divide-y dark:divide-gray-700"></tbody></table>
             </div>
-            <div class="mb-8 pl-2 text-sm font-medium text-gray-500 dark:text-gray-400">💡 註：此資料是以前一晚收盤價顯示</div>
+            <div class="mb-8 pl-2 text-sm font-medium text-gray-500 dark:text-gray-400">💡 註：報價每日自動更新兩次（台股收盤後、美股收盤後），開啟頁面時自動套用最新收盤價</div>
 
             <!-- 交易表格 -->
             <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-x-auto transition-colors">
@@ -347,6 +346,19 @@
                     </form>
                 </div>
             </div>
+        </div>
+    </div>
+    <div id="dailyPnlModal" class="fixed inset-0 bg-black bg-opacity-50 z-[65] hidden overflow-y-auto p-4">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-md mx-auto mt-12 sm:mt-24">
+            <div class="text-center mb-4">
+                <h2 class="text-xl font-bold text-slate-700 dark:text-slate-200">📊 今日損益速報</h2>
+                <p class="text-xs text-gray-400 mt-1" id="dailyPnlSub">與前一交易日收盤價相比</p>
+            </div>
+            <div id="dailyPnlTotal" class="text-center mb-4"></div>
+            <div id="dailyPnlMarkets" class="flex gap-3 mb-4"></div>
+            <div id="dailyPnlRows" class="max-h-60 overflow-y-auto mb-2 border-t dark:border-gray-700 pt-1"></div>
+            <p id="dailyPnlNote" class="text-[11px] text-gray-400 mb-4"></p>
+            <button onclick="window.closeDailyPnl()" class="w-full h-[44px] bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg">知道了</button>
         </div>
     </div>
     <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden overflow-y-auto p-4"><div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-md mx-auto mt-12 sm:mt-24"><h2 class="text-xl font-bold mb-4 text-slate-700 dark:text-slate-200 border-b dark:border-gray-600 pb-2">✏️ 修改紀錄</h2><form id="editForm" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4"><div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">券商</label><select id="editBroker" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white broker-dropdown" required></select></div><div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">標的</label><input type="text" id="editSymbol" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" required></div><div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">日期</label><input type="date" id="editDate" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" required></div><div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">國家</label><select id="editCountry" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white"><option value="台股">台股</option><option value="美股">美股</option></select></div><div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">類型</label><select id="editType" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white"><option value="股票">股票</option><option value="債券">債券</option><option value="高股息">高股息</option><option value="ETF">ETF</option></select></div><div id="editSharesContainer" class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">股數</label><input type="number" id="editShares" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white"></div><div id="editPriceContainer" class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300" id="editPriceLabel">成交價</label><input type="number" step="0.01" id="editPrice" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white"></div><div id="editFeeContainer" class="min-w-0 hidden"><label class="block text-sm mb-1 text-blue-500">手續費(+稅)</label><input type="number" step="0.01" id="editFee" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-blue-50 dark:bg-gray-700 dark:text-white"></div><div id="editBuyPriceContainer" class="min-w-0 hidden"><label class="block text-sm mb-1 dark:text-gray-300">買入單價</label><input type="number" step="0.01" id="editSellBuyPrice" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white"></div><div id="editDivContainer" class="min-w-0 hidden"><label class="block text-sm mb-1 text-orange-400">領息總額</label><input type="number" step="0.01" id="editDivAmount" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white"></div><div id="editDivFeeContainer" class="min-w-0 hidden"><label class="block text-sm mb-1 text-orange-600">預扣稅/手續費</label><input type="number" step="0.01" id="editDivFee" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-orange-50 dark:bg-gray-700 dark:text-white"></div><div class="col-span-1 sm:col-span-2 flex justify-end gap-3 mt-4"><button type="button" onclick="window.closeEditModal()" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded text-gray-700 dark:text-white">取消</button><button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded">確認修改</button></div></form></div></div>
@@ -486,11 +498,74 @@
             else { light.className = 'w-3 h-3 rounded-full bg-gray-400'; text.textContent = 'Offline'; text.className = 'text-xs font-bold text-gray-500 dark:text-gray-400'; }
         };
 
+        // 🔄 自動更新報價：讀取後端每日排程寫入的台/美股收盤價（含前一日 prev），套用到庫存。開啟頁面/登入時自動執行。
+        async function autoRefreshPrices() {
+            if (!useCloud || !window.currentUserUid) return false;
+            try {
+                if (!window.buyRecords.some(r => r.country === '台股' || r.country === '美股')) return false;
+                let twMarket = null, usMarket = null;
+                try { const ms = await getDoc(doc(db, 'daily_market', 'taiwan_stock_all')); if (ms.exists()) { twMarket = ms.data().stocks || null; if (twMarket) Object.keys(twMarket).forEach(c => { if (twMarket[c].name) window.stockDict[c] = twMarket[c].name; }); } } catch (e) { console.warn("台股每日資料讀取失敗", e); }
+                try { const ms = await getDoc(doc(db, 'daily_market', 'us_stock_all')); if (ms.exists()) usMarket = ms.data().stocks || null; } catch (e) { console.warn("美股每日資料讀取失敗", e); }
+                const canon = (s) => String(s).toUpperCase().replace(/[.\-/]/g, "");
+                const buildCanon = (m) => { const o = {}; if (m) Object.keys(m).forEach(k => { o[canon(k)] = m[k]; }); return o; };
+                const twCanon = buildCanon(twMarket), usCanon = buildCanon(usMarket);
+                const lookup = (market, mcanon, sym) => { if (market && market[sym]) return market[sym]; return mcanon[canon(sym)]; };
+                window._priceInfo = {}; let changed = 0;
+                window.buyRecords.forEach(r => {
+                    const md = r.country === '台股' ? lookup(twMarket, twCanon, r.symbol.trim()) : (r.country === '美股' ? lookup(usMarket, usCanon, r.symbol.trim()) : null);
+                    if (!md) return;
+                    const p = parseFloat(md.price);
+                    if (isNaN(p) || p <= 0) return;
+                    if (r.currentPrice !== p) { r.currentPrice = p; changed++; }
+                    window._priceInfo[`${r.symbol}_${r.country}`] = { now: p, prev: (typeof md.prev === 'number' && md.prev > 0) ? md.prev : null };
+                });
+                if (changed > 0) await saveData();
+                return true;
+            } catch (e) { console.warn('自動更新報價失敗', e); return false; }
+        }
+
+        // 📊 今日損益速報：與前一交易日收盤相比，每檔與總計都附百分比
+        window.closeDailyPnl = function() { document.getElementById('dailyPnlModal').classList.add('hidden'); window.unlockBodyScroll(); };
+        function showDailyPnlModal() {
+            const info = window._priceInfo || {}; const dR = window.getCurrencyRate();
+            const agg = {}; const missing = new Set();
+            window.buyRecords.forEach(r => {
+                if (r.country !== '台股' && r.country !== '美股') return;
+                const k = `${r.symbol}_${r.country}`; const pi = info[k];
+                if (!pi || pi.prev === null) { missing.add(r.symbol); return; }
+                if (!agg[k]) agg[k] = { symbol: r.symbol, country: r.country, shares: 0, now: pi.now, prev: pi.prev };
+                agg[k].shares += r.shares;
+            });
+            const list = Object.values(agg);
+            if (list.length === 0) return; // 無可比較資料就不顯示
+            let totChg = 0, totBase = 0; const perMkt = {}; let rowsH = '';
+            list.sort((a, b) => Math.abs(b.shares * (b.now - b.prev) * (window.exchangeRates[b.country] || 1)) - Math.abs(a.shares * (a.now - a.prev) * (window.exchangeRates[a.country] || 1)));
+            list.forEach(h => {
+                const fx = (window.exchangeRates[h.country] || 1) / dR;
+                const chg = h.shares * (h.now - h.prev) * fx;
+                const base = h.shares * h.prev * fx;
+                totChg += chg; totBase += base;
+                if (!perMkt[h.country]) perMkt[h.country] = { chg: 0, base: 0 };
+                perMkt[h.country].chg += chg; perMkt[h.country].base += base;
+                const pct = (h.now - h.prev) / h.prev * 100;
+                const cls = chg >= 0 ? 'text-profit' : 'text-loss'; const sg = chg >= 0 ? '+' : '';
+                rowsH += `<div class="flex items-center justify-between py-2 border-b dark:border-gray-700 last:border-0 text-sm"><div class="min-w-0 mr-2 truncate"><span class="font-bold dark:text-gray-200">${getDisplayName(h.symbol, h.country)}</span><span class="ml-2 text-xs text-gray-400">${h.prev} → ${h.now}</span></div><div class="text-right whitespace-nowrap ${cls} font-bold">${sg}${window.formatCurrency(chg)} <span class="text-xs">(${sg}${pct.toFixed(2)}%)</span></div></div>`;
+            });
+            const totPct = totBase > 0 ? totChg / totBase * 100 : 0;
+            const tCls = totChg >= 0 ? 'text-profit' : 'text-loss'; const tSg = totChg >= 0 ? '+' : '';
+            document.getElementById('dailyPnlTotal').innerHTML = `<div class="text-3xl font-bold ${tCls}">${tSg}${window.formatCurrency(totChg)}</div><div class="text-lg font-bold ${tCls} mt-1">${tSg}${totPct.toFixed(2)}%</div>`;
+            document.getElementById('dailyPnlMarkets').innerHTML = Object.keys(perMkt).map(c => { const m = perMkt[c]; const p = m.base > 0 ? m.chg / m.base * 100 : 0; const cl = m.chg >= 0 ? 'text-profit' : 'text-loss'; const s = m.chg >= 0 ? '+' : ''; return `<div class="flex-1 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center"><div class="text-xs text-gray-500 dark:text-gray-400 mb-1">${c}</div><div class="text-sm font-bold ${cl}">${s}${window.formatCurrency(m.chg)}</div><div class="text-xs font-bold ${cl}">${s}${p.toFixed(2)}%</div></div>`; }).join('');
+            document.getElementById('dailyPnlRows').innerHTML = rowsH;
+            document.getElementById('dailyPnlNote').textContent = missing.size > 0 ? `＊ ${[...missing].slice(0, 6).join('、')} 尚無前一交易日資料，未列入計算` : '';
+            window.lockBodyScroll(); document.getElementById('dailyPnlModal').classList.remove('hidden');
+        }
+
         async function authSuccess(uid, email, nickname) {
             window.currentUserUid = uid; window.currentUserName = nickname;
             document.getElementById('loginPage').style.display = 'none'; document.getElementById('registerPage').classList.add('hidden'); document.getElementById('mainApp').classList.remove('hidden'); document.getElementById('displayUsername').textContent = nickname;
             window.setConnectionStatus(useCloud && navigator.onLine);
-            await loadData(); initCharts(); document.getElementById('currencySelect').value = window.currentCurrency; window.changeLanguage(window.currentLang);
+            await loadData(); await autoRefreshPrices(); initCharts(); document.getElementById('currencySelect').value = window.currentCurrency; window.changeLanguage(window.currentLang);
+            showDailyPnlModal();
         }
 
         function authLogout() { window.currentUserUid = null; window.setConnectionStatus(false); document.getElementById('registerPage').classList.add('hidden'); document.getElementById('loginPage').style.display = 'flex'; document.getElementById('mainApp').classList.add('hidden'); document.getElementById('authPassword').value = ''; window.destroyAllCharts(); }
@@ -729,39 +804,6 @@
                 saveData(); window.updateAll(); window.closeEditModal(); showToast("✅ 修改成功！");
             });
 
-            // 🔥 Firestore 雙軌報價
-            document.getElementById("refreshPricesBtn").addEventListener("click", async function() {
-                const btn = this; const oT = btn.innerHTML; btn.innerHTML = "⏳ 更新中..."; btn.disabled = true;
-                try {
-                    if (!useCloud) { showToast("❌ 需連線雲端才能更新報價"); return; }
-                    // 找出庫存中需要更新的不重複標的
-                    const uS = []; window.buyRecords.forEach(r => { if (!uS.find(s => s.symbol === r.symbol && s.country === r.country)) uS.push({ symbol: r.symbol, country: r.country }); });
-                    if (uS.length === 0) { showToast("ℹ️ 目前庫存為空，無需更新"); return; }
-                    // 🔥 一次讀取後端每日排程寫入的台股 / 美股收盤價（各一次 Firestore 讀取）
-                    let twMarket = null, usMarket = null;
-                    try { const ms = await getDoc(doc(db, 'daily_market', 'taiwan_stock_all')); if (ms.exists()) { twMarket = ms.data().stocks || null; if (twMarket) Object.keys(twMarket).forEach(c => { if (twMarket[c].name && !window.stockDict[c]) window.stockDict[c] = twMarket[c].name; }); } } catch (e) { console.warn("台股每日資料讀取失敗", e); }
-                    try { const ms = await getDoc(doc(db, 'daily_market', 'us_stock_all')); if (ms.exists()) { usMarket = ms.data().stocks || null; if (usMarket) Object.keys(usMarket).forEach(s => { if (usMarket[s].name && !window.stockDict[s]) window.stockDict[s] = usMarket[s].name; }); } } catch (e) { console.warn("美股每日資料讀取失敗", e); }
-                    const getPrice = (md) => md ? parseFloat(md.price ?? md.close ?? md.regularMarketPrice) : NaN;
-                    // 代號正規化：相容 BRK.B / BRK-B / BRK/B 等不同寫法
-                    const canon = (s) => String(s).toUpperCase().replace(/[.\-/]/g, "");
-                    const buildCanon = (m) => { const o = {}; if (m) Object.keys(m).forEach(k => { o[canon(k)] = m[k]; }); return o; };
-                    const twCanon = buildCanon(twMarket), usCanon = buildCanon(usMarket);
-                    const lookup = (market, mcanon, sym) => { if (market && market[sym]) return market[sym]; return mcanon[canon(sym)]; };
-                    const lP = {}; let eC = 0; const missing = [];
-                    for (const stk of uS) {
-                        const bs = stk.symbol.trim(); let mp = NaN;
-                        if (stk.country === '台股') mp = getPrice(lookup(twMarket, twCanon, bs));
-                        else if (stk.country === '美股') mp = getPrice(lookup(usMarket, usCanon, bs));
-                        if (!isNaN(mp) && mp > 0) lP[`${stk.symbol}_${stk.country}`] = mp;
-                        else { eC++; missing.push(stk.symbol); }
-                    }
-                    let uC = 0; window.buyRecords.forEach(r => { const k = `${r.symbol}_${r.country}`; if (lP[k]) { r.currentPrice = lP[k]; uC++; } });
-                    saveData(); window.updateAll();
-                    if (uC > 0 && eC === 0) showToast(`✅ 已更新 ${uC} 筆報價`);
-                    else if (uC > 0) showToast(`⚠️ 更新 ${uC} 筆，${eC} 筆查無資料：${missing.slice(0,5).join('、')}${missing.length>5?'…':''}`);
-                    else showToast(`❌ 查無報價資料（美股每日抓取可能尚未設定）`);
-                } catch (e) { showToast("❌ 更新失敗：" + (e.message || e)); } finally { btn.innerHTML = oT; btn.disabled = false; }
-            });
         });
 
         window.syncFeesToInventory = function() { document.getElementById('syncConfirmModal').classList.remove('hidden'); };
