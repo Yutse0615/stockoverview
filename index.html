@@ -102,8 +102,9 @@
 
         <div class="flex justify-center mb-8">
             <div class="bg-gray-200 dark:bg-gray-800 p-1 rounded-full inline-flex shadow-inner">
-                <button onclick="window.switchPage('trade')" id="tab-trade" class="px-6 py-2 rounded-full text-sm font-bold transition-all bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-300 shadow" data-i18n="tabTrade">庫存與交易</button>
-                <button onclick="window.switchPage('dividend')" id="tab-dividend" class="px-6 py-2 rounded-full text-sm font-bold transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700" data-i18n="tabDiv">股息紀錄</button>
+                <button onclick="window.switchPage('trade')" id="tab-trade" class="px-4 sm:px-6 py-2 rounded-full text-sm font-bold transition-all bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-300 shadow" data-i18n="tabTrade">庫存與交易</button>
+                <button onclick="window.switchPage('dividend')" id="tab-dividend" class="px-4 sm:px-6 py-2 rounded-full text-sm font-bold transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700" data-i18n="tabDiv">股息紀錄</button>
+                <button onclick="window.switchPage('exchange')" id="tab-exchange" class="px-4 sm:px-6 py-2 rounded-full text-sm font-bold transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700" data-i18n="tabExchange">換匯紀錄</button>
             </div>
         </div>
 
@@ -229,23 +230,6 @@
                 <table class="w-full text-left border-collapse min-w-[1000px]"><thead id="sellThead"></thead><tbody id="sellTableBody" class="divide-y dark:divide-gray-700"></tbody></table>
             </div>
 
-            <!-- 歷史換匯紀錄 -->
-            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-cyan-100 dark:border-cyan-900 border-t-4 border-t-cyan-500 mt-8">
-                <h2 class="text-xl font-bold mb-4 flex items-center dark:text-gray-200"><span class="text-cyan-500 mr-2">💱</span> <span data-i18n="exchangeHistTitle">歷史換匯紀錄</span></h2>
-                <form id="exchangeHistForm" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 items-end">
-                    <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300" data-i18n="colTime">時間</label><input type="date" id="exDate" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" required></div>
-                    <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300" data-i18n="colCurrency">幣別</label><select id="exCurrency" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white"><option value="USD">美金 (USD)</option><option value="JPY">日圓 (JPY)</option><option value="EUR">歐元 (EUR)</option><option value="KRW">韓元 (KRW)</option></select></div>
-                    <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300"><span data-i18n="colExAmount">換匯金額</span> (該幣別)</label><input type="number" step="0.01" id="exAmount" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" required placeholder="如: 1000"></div>
-                    <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300"><span data-i18n="colRate">匯率</span> (對台幣)</label><input type="number" step="0.0001" id="exRate" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" required placeholder="如: 32.5"></div>
-                    <div class="min-w-0"><button type="submit" class="w-full h-[42px] bg-cyan-500 hover:bg-cyan-600 text-white font-bold rounded" data-i18n="save">儲存</button></div>
-                </form>
-                <div class="mt-6 overflow-x-auto border dark:border-gray-700 rounded-lg">
-                    <table class="w-full text-left border-collapse min-w-[640px] text-sm">
-                        <thead class="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600 text-gray-600 dark:text-gray-300"><tr><th class="p-3" data-i18n="colTime">時間</th><th class="p-3" data-i18n="colCurrency">幣別</th><th class="p-3 text-right" data-i18n="colExAmount">換匯金額</th><th class="p-3 text-right" data-i18n="colExRate">換匯匯率</th><th class="p-3 text-right" data-i18n="colNowRate">現在匯率</th><th class="p-3 text-right" data-i18n="colPnl">盈虧</th><th class="p-3 text-center">操作</th></tr></thead>
-                        <tbody id="exchangeHistBody" class="divide-y dark:divide-gray-700"></tbody>
-                    </table>
-                </div>
-            </div>
         </div>
 
         <!-- ==================== 第二頁：股息紀錄 ==================== -->
@@ -294,6 +278,30 @@
                     </div>
                 </div>
                 <table class="w-full text-left border-collapse min-w-[800px]"><thead id="divThead"></thead><tbody id="dividendTableBody" class="divide-y dark:divide-gray-700"></tbody></table>
+            </div>
+        </div>
+
+        <!-- ==================== 第三頁：換匯紀錄 ==================== -->
+        <div id="page-exchange" class="page-content">
+            <!-- 各幣別彙總卡片 -->
+            <div id="exchangeSummaryCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"></div>
+
+            <!-- 歷史換匯紀錄 -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-cyan-100 dark:border-cyan-900 border-t-4 border-t-cyan-500">
+                <h2 class="text-xl font-bold mb-4 flex items-center dark:text-gray-200"><span class="text-cyan-500 mr-2">💱</span> <span data-i18n="exchangeHistTitle">歷史換匯紀錄</span></h2>
+                <form id="exchangeHistForm" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 items-end">
+                    <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300" data-i18n="colTime">時間</label><input type="date" id="exDate" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" required></div>
+                    <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300" data-i18n="colCurrency">幣別</label><select id="exCurrency" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white"><option value="USD">美金 (USD)</option><option value="JPY">日圓 (JPY)</option><option value="EUR">歐元 (EUR)</option><option value="KRW">韓元 (KRW)</option></select></div>
+                    <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300"><span data-i18n="colExAmount">換匯金額</span> (該幣別)</label><input type="number" step="0.01" id="exAmount" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" required placeholder="如: 1000"></div>
+                    <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300"><span data-i18n="colRate">匯率</span> (對台幣)</label><input type="number" step="0.0001" id="exRate" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" required placeholder="如: 32.5"></div>
+                    <div class="min-w-0"><button type="submit" class="w-full h-[42px] bg-cyan-500 hover:bg-cyan-600 text-white font-bold rounded" data-i18n="save">儲存</button></div>
+                </form>
+                <div class="mt-6 overflow-x-auto border dark:border-gray-700 rounded-lg">
+                    <table class="w-full text-left border-collapse min-w-[640px] text-sm">
+                        <thead class="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600 text-gray-600 dark:text-gray-300"><tr><th class="p-3" data-i18n="colTime">時間</th><th class="p-3" data-i18n="colCurrency">幣別</th><th class="p-3 text-right" data-i18n="colExAmount">換匯金額</th><th class="p-3 text-right" data-i18n="colExRate">換匯匯率</th><th class="p-3 text-right" data-i18n="colNowRate">現在匯率</th><th class="p-3 text-right" data-i18n="colPnl">盈虧</th><th class="p-3 text-center">操作</th></tr></thead>
+                        <tbody id="exchangeHistBody" class="divide-y dark:divide-gray-700"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div> <!-- mainApp end -->
@@ -378,7 +386,7 @@
                 feeLabel: '手續費', divFeeCol: '手續費/稅金', netDivCol: '實領股息總額', optTW: '台股', optUS: '美股', optJP: '日股', optKR: '韓股', optStock: '股票', optBond: '債券', optHighDiv: '高股息', cTotal: '市值總額', cNetUnrealized: '淨損益', cNetRealized: '淨已實現', cTotalDiv: '淨領取股息',
                 notifHolding: '您的庫存', notifDivWord: '預計除權息', notifNote: '來源：', profit: '盈', loss: '虧', unitTWD: '(台幣)', unitUSD: '(美金)', unitJPY: '(日圓)', unitKRW: '(韓元)', unitEUR: '(歐元)',
                 emailLabel: 'Email (帳號)', passwordLabel: '密碼 (至少6碼)', rememberMe: '記住此帳號', btnRegister: '註冊', btnLogin: '登入', regTitle: '註冊新帳號', nickname: '暱稱', passwordShort: '密碼', btnConfirmReg: '確認註冊', btnBackLogin: '返回登入',
-                btnUpdateRates: '更新匯率', settingsTitle: '設定', settingsAppearance: '外觀', settingsDarkMode: '深色模式', settingsChartTheme: '圖表主題色', settingsPrefs: '偏好', settingsLang: '語言', settingsCurrency: '顯示幣別', settingsAccount: '帳號', save: '儲存', settingsChangePwd: '更改密碼', settingsUpdatePwd: '更新密碼', settingsPwdHint: '※ 若太久沒登入，更改密碼前可能需要先重新登入', exchangeHistTitle: '歷史換匯紀錄', colTime: '時間', colCurrency: '幣別', colRate: '匯率', colExAmount: '換匯金額', colExRate: '換匯匯率', colNowRate: '現在匯率', colPnl: '盈虧'
+                btnUpdateRates: '更新匯率', settingsTitle: '設定', settingsAppearance: '外觀', settingsDarkMode: '深色模式', settingsChartTheme: '圖表主題色', settingsPrefs: '偏好', settingsLang: '語言', settingsCurrency: '顯示幣別', settingsAccount: '帳號', save: '儲存', settingsChangePwd: '更改密碼', settingsUpdatePwd: '更新密碼', settingsPwdHint: '※ 若太久沒登入，更改密碼前可能需要先重新登入', exchangeHistTitle: '歷史換匯紀錄', colTime: '時間', colCurrency: '幣別', colRate: '匯率', colExAmount: '換匯金額', colExRate: '換匯匯率', colNowRate: '現在匯率', colPnl: '盈虧', tabTrade: '庫存與交易', tabDiv: '股息紀錄', tabExchange: '換匯紀錄'
             },
             'en': {
                 appTitle: 'Stock Overview', loginSub: 'Login to your account', chartCountry: 'Country Ratio', chartAsset: 'Asset Ratio', chartUnrealized: 'P/L (Broker)', chartRealized: 'Realized P/L', chartDivBroker: 'Dividends (Broker)', chartDivCountry: 'Dividends (Country)', subCountry: 'Based on Portfolio Value', subUnrealized: 'Profit/Loss', subRealized: 'Historical Trade P/L', subDivBroker: 'Historical Dividend Total', subDivCountry: 'TW vs US Allocation',
@@ -388,7 +396,7 @@
                 feeLabel: 'Fee', divFeeCol: 'Fee/Tax', netDivCol: 'Net Dividend', optTW: 'TW Stock', optUS: 'US Stock', optJP: 'JP Stock', optKR: 'KR Stock', optStock: 'Stock', optBond: 'Bond', optHighDiv: 'High Div', cTotal: 'Total Value', cNetUnrealized: 'Net P/L', cNetRealized: 'Net Realized', cTotalDiv: 'Net Dividends',
                 notifHolding: 'Holding', notifDivWord: 'Ex-Div Date', notifNote: 'Source:', profit: 'Win', loss: 'Loss', unitTWD: '(TWD)', unitUSD: '(USD)', unitJPY: '(JPY)', unitKRW: '(KRW)', unitEUR: '(EUR)',
                 emailLabel: 'Email', passwordLabel: 'Password (min 6)', rememberMe: 'Remember me', btnRegister: 'Register', btnLogin: 'Login', regTitle: 'Create Account', nickname: 'Nickname', passwordShort: 'Password', btnConfirmReg: 'Sign Up', btnBackLogin: 'Back to Login',
-                btnUpdateRates: 'Update Rates', settingsTitle: 'Settings', settingsAppearance: 'Appearance', settingsDarkMode: 'Dark Mode', settingsChartTheme: 'Chart Theme', settingsPrefs: 'Preferences', settingsLang: 'Language', settingsCurrency: 'Display Currency', settingsAccount: 'Account', save: 'Save', settingsChangePwd: 'Change Password', settingsUpdatePwd: 'Update Password', settingsPwdHint: '* You may need to re-login before changing password', exchangeHistTitle: 'Exchange Rate History', colTime: 'Time', colCurrency: 'Currency', colRate: 'Rate', colExAmount: 'Amount', colExRate: 'Exchanged Rate', colNowRate: 'Current Rate', colPnl: 'P/L'
+                btnUpdateRates: 'Update Rates', settingsTitle: 'Settings', settingsAppearance: 'Appearance', settingsDarkMode: 'Dark Mode', settingsChartTheme: 'Chart Theme', settingsPrefs: 'Preferences', settingsLang: 'Language', settingsCurrency: 'Display Currency', settingsAccount: 'Account', save: 'Save', settingsChangePwd: 'Change Password', settingsUpdatePwd: 'Update Password', settingsPwdHint: '* You may need to re-login before changing password', exchangeHistTitle: 'Exchange Rate History', colTime: 'Time', colCurrency: 'Currency', colRate: 'Rate', colExAmount: 'Amount', colExRate: 'Exchanged Rate', colNowRate: 'Current Rate', colPnl: 'P/L', tabTrade: 'Portfolio & Trades', tabDiv: 'Dividends', tabExchange: 'FX History'
             }
         };
 
@@ -517,10 +525,16 @@
         }
 
         window.switchPage = function(page) {
-            document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active')); document.getElementById('page-' + page).classList.add('active');
-            const bt = document.getElementById('tab-trade'); const bd = document.getElementById('tab-dividend');
-            if (page === 'trade') { bt.className = "px-6 py-2 rounded-full text-sm font-bold bg-white text-blue-600 shadow"; bd.className = "px-6 py-2 rounded-full text-sm font-bold text-gray-500 hover:text-gray-700"; } 
-            else { bd.className = "px-6 py-2 rounded-full text-sm font-bold bg-white text-orange-500 shadow"; bt.className = "px-6 py-2 rounded-full text-sm font-bold text-gray-500 hover:text-gray-700"; renderDividendNotifications(); }
+            document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+            const target = document.getElementById('page-' + page); if (target) target.classList.add('active');
+            const activeColor = { trade: 'text-blue-600 dark:text-blue-300', dividend: 'text-orange-500 dark:text-orange-300', exchange: 'text-cyan-600 dark:text-cyan-300' };
+            ['trade', 'dividend', 'exchange'].forEach(k => {
+                const el = document.getElementById('tab-' + k); if (!el) return;
+                el.className = (k === page)
+                    ? `px-4 sm:px-6 py-2 rounded-full text-sm font-bold transition-all bg-white dark:bg-gray-600 shadow ${activeColor[k]}`
+                    : 'px-4 sm:px-6 py-2 rounded-full text-sm font-bold transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700';
+            });
+            if (page === 'dividend') renderDividendNotifications();
         }
         window.setViewMode = function(table, mode) { window.viewModes[table] = mode; window.updateAll(); }
 
@@ -791,6 +805,23 @@
                 }
                 return `<tr class="hover:bg-gray-100 dark:hover:bg-gray-600"><td class="p-3">${r.date}</td><td class="p-3">${currencyLabels[r.currency] || r.currency}</td><td class="p-3 text-right font-mono">${hasAmt ? r.amount.toLocaleString() : '-'}</td><td class="p-3 text-right font-mono text-cyan-600 dark:text-cyan-400">${r.rate}</td><td class="p-3 text-right font-mono">${nowRate ? nowRate.toFixed(4) : '-'}</td><td class="p-3 text-right">${pnlCell}</td><td class="p-3 text-center"><button onclick="window.deleteExchangeHist(${r.id})" class="text-xs bg-red-50 text-red-500 px-2 py-1 rounded">刪除</button></td></tr>`;
             }).join('');
+            // 各幣別彙總卡片（總金額、加權均價、依現在匯率的盈虧）
+            const sc = document.getElementById('exchangeSummaryCards');
+            if (sc) {
+                const byCur = {};
+                window.exchangeHistory.forEach(r => {
+                    if (!(typeof r.amount === 'number' && r.amount > 0 && r.rate > 0)) return;
+                    if (!byCur[r.currency]) byCur[r.currency] = { amt: 0, cost: 0 };
+                    byCur[r.currency].amt += r.amount; byCur[r.currency].cost += r.amount * r.rate;
+                });
+                const cards = Object.keys(byCur).map(cur => {
+                    const o = byCur[cur]; const avg = o.cost / o.amt; const now = window.getNowRate(cur);
+                    let pnlHtml = '<span class="text-gray-400">-</span>';
+                    if (now > 0) { const pct = (now - avg) / avg * 100; const cls = pct >= 0 ? 'text-profit' : 'text-loss'; const sign = pct >= 0 ? '+' : ''; pnlHtml = `<span class="${cls}">${sign}${pct.toFixed(2)}%　${sign}${window.formatCurrency(o.amt * (now - avg))}</span>`; }
+                    return `<div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border dark:border-gray-700"><div class="flex items-center justify-between mb-2"><span class="text-sm font-bold text-gray-500 dark:text-gray-400">💱 ${currencyLabels[cur] || cur}</span><span class="text-xs text-gray-400">均價 ${avg.toFixed(4)}</span></div><div class="text-2xl font-bold text-slate-700 dark:text-white mb-1">${o.amt.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div><div class="text-sm font-bold">${pnlHtml}</div></div>`;
+                });
+                sc.innerHTML = cards.length ? cards.join('') : `<div class="col-span-full text-center text-sm text-gray-400 py-6 bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700">尚無換匯紀錄，請在下方新增第一筆 💱</div>`;
+            }
         };
         window.deleteExchangeHist = function(id) { window.exchangeHistory = window.exchangeHistory.filter(r => r.id !== id); saveData(); window.renderExchangeHistTable(); showToast("🗑️ 已刪除"); };
         window.deleteFeeRule = function(i) { window.feeSettings.splice(i, 1); saveData(); window.updateAll(); }
