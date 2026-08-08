@@ -957,6 +957,16 @@
             const n = Math.round(yr * 12), i = rp / 100 / 12;
             const paid = Math.min(window.calcPaidMonths(loan.startDate), n);
             if (!(P > 0) || n <= 0 || paid <= 0) return 0;
+            // 本息平均：若使用者填的月付與理論值不同（銀行進位、自行多繳），以實際月付逐期模擬，結果才會與帳單一致
+            if (loan.method === 'annuity') {
+                const theo = i === 0 ? P / n : P * i / (1 - Math.pow(1 + i, -n));
+                const actual = parseFloat(loan.monthly) || 0;
+                if (actual > 0 && Math.abs(actual - theo) >= 1) {
+                    let bal = P;
+                    for (let k = 0; k < paid && bal > 0; k++) bal = bal * (1 + i) - actual;
+                    return Math.min(P, Math.max(0, P - bal));
+                }
+            }
             if (loan.method === 'principal') return Math.min(P, (P / n) * paid);
             if (loan.method === 'grace') {
                 const g = Math.min(Math.round((parseFloat(loan.graceYears) || 0) * 12), n);
