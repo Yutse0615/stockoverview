@@ -946,7 +946,9 @@
             const s = new Date(startDate + 'T00:00:00'); if (isNaN(s)) return 0;
             const now = new Date();
             let m = (now.getFullYear() - s.getFullYear()) * 12 + (now.getMonth() - s.getMonth());
-            if (now.getDate() >= s.getDate()) m += 1;
+            // 扣款日若為 30/31 號，遇到天數較少的月份（如 2 月）以該月最後一天為準
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+            if (now.getDate() >= Math.min(s.getDate(), lastDay)) m += 1;
             return Math.max(0, m);
         };
         // 已還本金（依還款方式攤還）
