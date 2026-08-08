@@ -326,6 +326,7 @@
                     <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">還款方式</label><select id="loanMethod" onchange="window.handleLoanMethodChange()" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white"><option value="annuity">本息平均攤還</option><option value="principal">本金平均攤還</option><option value="grace">寬限期繳息後繳本</option></select></div>
                     <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">寬限期 (年)</label><input type="number" step="1" id="loanGrace" value="0" disabled oninput="window.triggerCalcLoan()" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-600"></div>
                     <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">首次繳款日</label><input type="date" id="loanStart" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" required></div>
+                    <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">計息方式</label><select id="loanDayCount" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white"><option value="daily">日計息（實際天數÷365）</option><option value="monthly">月計息（年利率÷12）</option></select></div>
                     <div class="min-w-0"><label class="block text-sm mb-1 text-indigo-500">每月繳款 (試算/可改)</label><input type="number" step="1" id="loanMonthly" class="w-full h-[42px] px-3 border border-indigo-200 rounded bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300" required></div>
                     <div class="col-span-1 sm:col-span-2 md:col-span-4"><div id="loanCalcHint" class="text-xs text-gray-400 mb-2"></div><button type="submit" class="w-full h-[42px] bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded">新增貸款</button></div>
                 </form>
@@ -833,7 +834,8 @@
                 const monthly = parseFloat(document.getElementById("loanMonthly").value) || 0;
                 if (!name || !(amount > 0) || isNaN(rate) || !(years > 0) || !startDate) return showToast("❌ 請填寫完整");
                 if (method === 'grace' && graceYears >= years) return showToast("❌ 寬限期需小於貸款年期");
-                window.loanRecords.push({ id: Date.now(), name, amount, rate, years, method, graceYears, startDate, monthly, prepayments: [] });
+                const dayCount = document.getElementById("loanDayCount").value;
+                window.loanRecords.push({ id: Date.now(), name, amount, rate, years, method, graceYears, startDate, monthly, dayCount, prepayments: [] });
                 this.reset(); document.getElementById("loanGrace").value = 0; window.handleLoanMethodChange();
                 saveData(); window.renderLoanTable(); showToast("✅ 貸款已新增");
             });
@@ -999,17 +1001,25 @@
             if (t.getDate() >= Math.min(s.getDate(), lastDay)) m += 1;
             return Math.max(0, m);
         };
-        // 🔁 貸款逐期模擬（支援提前還款：降低月付 / 縮短年限）
-        // 回傳 { balance 剩餘本金, monthly 目前月付, elapsed 已繳期數, remaining 剩餘期數, prepaid 提前還款總額, clearedAt 提早結清期數 }
+        // 🔁 貸款逐期模擬（支援提前還款、日計息/月計息）
+        // 計息方式：日計息（台灣銀行慣例）利息 = 本金 × 年利率 × 該期實際天數 ÷ 365；月計息 = 本金 × 年利率 ÷ 12
+        // 回傳 { balance 剩餘本金, monthly 目前月付, elapsed 已繳期數, remaining 剩餘期數, prepaid 提前還款總額, clearedAt 提早結清期數, interestPaid 累計利息 }
         window.simulateLoan = function(loan, uptoMonth) {
             const P = parseFloat(loan.amount) || 0;
             const n = Math.round((parseFloat(loan.years) || 0) * 12);
-            const i = (parseFloat(loan.rate) || 0) / 100 / 12;
+            const ra = (parseFloat(loan.rate) || 0) / 100;             // 年利率
+            const i = ra / 12;                                         // 月利率（月付金公式用）
             const method = loan.method;
             const g = method === 'grace' ? Math.min(Math.round((parseFloat(loan.graceYears) || 0) * 12), n) : 0;
             const elapsed = Math.max(0, Math.min(uptoMonth !== undefined ? uptoMonth : window.calcPaidMonths(loan.startDate), n));
-            const out = { balance: P, monthly: 0, elapsed, remaining: n, prepaid: 0, clearedAt: null };
+            const out = { balance: P, monthly: 0, elapsed, remaining: n, prepaid: 0, clearedAt: null, interestPaid: 0 };
             if (!(P > 0) || n <= 0) return out;
+
+            const sd = new Date(loan.startDate + 'T00:00:00');
+            const useDaily = loan.dayCount !== 'monthly' && !isNaN(sd);   // 預設日計息
+            const addM = (d, m) => { const y = d.getFullYear(), mo = d.getMonth() + m, day = d.getDate(); const last = new Date(y, mo + 1, 0).getDate(); return new Date(y, mo, Math.min(day, last)); };
+            // 第 k 期的計息利率
+            const periodRate = (k) => useDaily ? ra * Math.round((addM(sd, k) - addM(sd, k - 1)) / 86400000) / 365 : i;
             const annuity = (bal, months) => months <= 0 ? bal : (i === 0 ? bal / months : bal * i / (1 - Math.pow(1 + i, -months)));
 
             // 起始月付：本息平均優先採用使用者填的實際金額（銀行進位/自行多繳）
@@ -1027,11 +1037,18 @@
                 (pre[k] = pre[k] || []).push(p);
             });
 
+            // 跑一期：回傳新餘額（並累計利息）
+            const runPeriod = (bal, k, payAmt, acc) => {
+                const r = periodRate(k), int = bal * r;
+                if (acc) acc.interestPaid += int;
+                if (method === 'principal') return Math.max(0, bal - Math.min(payAmt, bal));   // 只扣本金，利息另繳
+                if (method === 'grace' && k <= g) return bal;                                   // 寬限期只繳息
+                return Math.max(0, bal + int - payAmt);
+            };
+
             let bal = P;
             for (let k = 1; k <= elapsed && bal > 0.005; k++) {
-                if (method === 'principal') bal -= Math.min(pay, bal);            // 只扣本金，利息另計
-                else if (method === 'grace' && k <= g) { /* 寬限期只繳息，本金不動 */ }
-                else bal = Math.max(0, bal * (1 + i) - pay);
+                bal = runPeriod(bal, k, pay, out);
                 // 當期提前還款
                 (pre[k] || []).forEach(p => {
                     const amt = Math.min(parseFloat(p.amount) || 0, bal);
@@ -1046,17 +1063,23 @@
                 if (bal <= 0.005) { bal = 0; out.clearedAt = k; break; }
             }
             out.balance = bal;
+            const nextR = periodRate(elapsed + 1);
             // 目前每月應繳
             if (bal <= 0) out.monthly = 0;
-            else if (method === 'principal') out.monthly = pay + bal * i;
-            else if (method === 'grace' && elapsed < g) out.monthly = bal * i;
-            else out.monthly = Math.min(pay, bal * (1 + i));
-            // 剩餘期數
+            else if (method === 'principal') out.monthly = pay + bal * nextR;
+            else if (method === 'grace' && elapsed < g) out.monthly = bal * nextR;
+            else out.monthly = Math.min(pay, bal * (1 + nextR));
+            // 剩餘期數：往後逐期模擬至結清（同時累計未來利息）
             if (bal <= 0) out.remaining = 0;
-            else if (method === 'principal') out.remaining = Math.ceil(bal / pay);
             else if (method === 'grace' && elapsed < g) out.remaining = (g - elapsed) + (n - g);
-            else if (i === 0) out.remaining = Math.ceil(bal / pay);
-            else out.remaining = pay > bal * i ? Math.ceil(-Math.log(1 - bal * i / pay) / Math.log(1 + i)) : Infinity;
+            else {
+                const future = { interestPaid: 0 };
+                let b2 = bal, cnt = 0, k2 = elapsed;
+                while (b2 > 0.005 && cnt < 1200) { k2++; cnt++; const prev = b2; b2 = runPeriod(b2, k2, pay, future); if (b2 >= prev - 0.005 && method !== 'principal') { cnt = Infinity; break; } }
+                out.remaining = cnt;
+                out.futureInterest = future.interestPaid;
+            }
+            out.totalInterest = out.interestPaid + (out.futureInterest || 0);
             return out;
         };
         window.calcPaidPrincipal = function(loan) {
@@ -1099,11 +1122,12 @@
             const base = window.simulateLoan({ ...l, prepayments: [] });   // 未提前還款的對照組
             const fmtM = (m) => m === Infinity ? '—' : `${m} 期`;
             const diffPay = base.monthly - sim.monthly, diffTerm = base.remaining - sim.remaining;
+            const savedInt = (base.totalInterest || 0) - (sim.totalInterest || 0);
             document.getElementById('prepayStatus').innerHTML = [
                 { t: '剩餘本金', v: window.formatCurrency(sim.balance, true), s: sim.prepaid > 0 ? `較原本少 ${window.formatCurrency(base.balance - sim.balance, true)}` : '', c: 'text-rose-600 dark:text-rose-400' },
                 { t: '目前月付', v: window.formatCurrency(sim.monthly, true), s: diffPay > 1 ? `↓ 減少 ${window.formatCurrency(diffPay, true)}` : '', c: 'text-indigo-600 dark:text-indigo-300' },
                 { t: '剩餘期數', v: fmtM(sim.remaining), s: diffTerm > 0 ? `↓ 縮短 ${diffTerm} 期` : '', c: 'text-slate-700 dark:text-white' },
-                { t: '提前還款總額', v: window.formatCurrency(sim.prepaid, true), s: sim.clearedAt ? `已於第 ${sim.clearedAt} 期結清 🎉` : '', c: 'text-emerald-600 dark:text-emerald-400' }
+                { t: '提前還款總額', v: window.formatCurrency(sim.prepaid, true), s: sim.clearedAt ? `已於第 ${sim.clearedAt} 期結清 🎉` : (savedInt > 1 ? `省下利息約 ${window.formatCurrency(savedInt, true)}` : ''), c: 'text-emerald-600 dark:text-emerald-400' }
             ].map(x => `<div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3"><div class="text-xs text-gray-500 dark:text-gray-400 mb-1">${x.t}</div><div class="text-base font-bold ${x.c}">${x.v}</div>${x.s ? `<div class="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5">${x.s}</div>` : ''}</div>`).join('');
             const list = [...(l.prepayments || [])].sort((a, b) => new Date(a.date) - new Date(b.date));
             document.getElementById('prepayTableBody').innerHTML = list.map(p => `<tr class="hover:bg-gray-50 dark:hover:bg-gray-700"><td class="p-2">${p.date}</td><td class="p-2 text-right font-mono text-emerald-600 dark:text-emerald-400">${window.formatCurrency(p.amount, true)}</td><td class="p-2 text-xs">${prepayModeLabels[p.mode] || p.mode}</td><td class="p-2 text-center"><button onclick="window.deletePrepay(${p.id})" class="text-xs bg-red-50 text-red-500 px-2 py-1 rounded">刪除</button></td></tr>`).join('') || `<tr><td colspan="4" class="p-4 text-center text-gray-400">尚無提前還款紀錄</td></tr>`;
