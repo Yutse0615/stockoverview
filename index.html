@@ -325,6 +325,7 @@
                     <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">貸款年期 (年)</label><input type="number" step="1" id="loanYears" oninput="window.triggerCalcLoan()" placeholder="如: 30" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" required></div>
                     <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">還款方式</label><select id="loanMethod" onchange="window.handleLoanMethodChange()" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white"><option value="annuity">本息平均攤還</option><option value="principal">本金平均攤還</option><option value="grace">寬限期繳息後繳本</option></select></div>
                     <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">寬限期 (年)</label><input type="number" step="1" id="loanGrace" value="0" disabled oninput="window.triggerCalcLoan()" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-600"></div>
+                    <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">撥款日 <span class="text-gray-400 text-xs">(選填)</span></label><input type="date" id="loanDisburse" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white"></div>
                     <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">首次繳款日</label><input type="date" id="loanStart" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" required></div>
                     <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">計息方式</label><select id="loanDayCount" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white"><option value="daily">日計息（實際天數÷365）</option><option value="monthly">月計息（年利率÷12）</option></select></div>
                     <div class="min-w-0"><label class="block text-sm mb-1 text-indigo-500">每月繳款 (試算/可改)</label><input type="number" step="1" id="loanMonthly" class="w-full h-[42px] px-3 border border-indigo-200 rounded bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300" required></div>
@@ -835,7 +836,9 @@
                 if (!name || !(amount > 0) || isNaN(rate) || !(years > 0) || !startDate) return showToast("❌ 請填寫完整");
                 if (method === 'grace' && graceYears >= years) return showToast("❌ 寬限期需小於貸款年期");
                 const dayCount = document.getElementById("loanDayCount").value;
-                window.loanRecords.push({ id: Date.now(), name, amount, rate, years, method, graceYears, startDate, monthly, dayCount, prepayments: [] });
+                const disburseDate = document.getElementById("loanDisburse").value || null;
+                if (disburseDate && new Date(disburseDate) > new Date(startDate)) return showToast("❌ 撥款日不可晚於首次繳款日");
+                window.loanRecords.push({ id: Date.now(), name, amount, rate, years, method, graceYears, startDate, disburseDate, monthly, dayCount, prepayments: [] });
                 this.reset(); document.getElementById("loanGrace").value = 0; window.handleLoanMethodChange();
                 saveData(); window.renderLoanTable(); showToast("✅ 貸款已新增");
             });
@@ -1020,7 +1023,14 @@
             const addM = (d, m) => { const y = d.getFullYear(), mo = d.getMonth() + m, day = d.getDate(); const last = new Date(y, mo + 1, 0).getDate(); return new Date(y, mo, Math.min(day, last)); };
             // 第 k 期的計息利率：利息累計期間為「上次繳款日 → 本次繳款日」
             // 第 k 期繳款日 = 首次繳款日 + (k-1) 個月，故計息區間為 addM(sd,k-2) ~ addM(sd,k-1)
-            const periodRate = (k) => useDaily ? ra * Math.round((addM(sd, k - 1) - addM(sd, k - 2)) / 86400000) / 365 : i;
+            // 第 1 期若有填撥款日，改用「撥款日 → 首次繳款日」的實際天數（常見為不足一個月）
+            const dd = loan.disburseDate ? new Date(loan.disburseDate + 'T00:00:00') : null;
+            const firstDays = (dd && !isNaN(dd)) ? Math.max(0, Math.round((sd - dd) / 86400000)) : null;
+            const periodRate = (k) => {
+                if (!useDaily) return i;
+                if (k === 1 && firstDays !== null) return ra * firstDays / 365;
+                return ra * Math.round((addM(sd, k - 1) - addM(sd, k - 2)) / 86400000) / 365;
+            };
             const annuity = (bal, months) => months <= 0 ? bal : (i === 0 ? bal / months : bal * i / (1 - Math.pow(1 + i, -months)));
 
             // 起始月付：本息平均優先採用使用者填的實際金額（銀行進位/自行多繳）
