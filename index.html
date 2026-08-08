@@ -1018,8 +1018,9 @@
             const sd = new Date(loan.startDate + 'T00:00:00');
             const useDaily = loan.dayCount !== 'monthly' && !isNaN(sd);   // 預設日計息
             const addM = (d, m) => { const y = d.getFullYear(), mo = d.getMonth() + m, day = d.getDate(); const last = new Date(y, mo + 1, 0).getDate(); return new Date(y, mo, Math.min(day, last)); };
-            // 第 k 期的計息利率
-            const periodRate = (k) => useDaily ? ra * Math.round((addM(sd, k) - addM(sd, k - 1)) / 86400000) / 365 : i;
+            // 第 k 期的計息利率：利息累計期間為「上次繳款日 → 本次繳款日」
+            // 第 k 期繳款日 = 首次繳款日 + (k-1) 個月，故計息區間為 addM(sd,k-2) ~ addM(sd,k-1)
+            const periodRate = (k) => useDaily ? ra * Math.round((addM(sd, k - 1) - addM(sd, k - 2)) / 86400000) / 365 : i;
             const annuity = (bal, months) => months <= 0 ? bal : (i === 0 ? bal / months : bal * i / (1 - Math.pow(1 + i, -months)));
 
             // 起始月付：本息平均優先採用使用者填的實際金額（銀行進位/自行多繳）
