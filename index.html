@@ -1031,7 +1031,8 @@
                 if (k === 1 && firstDays !== null) return ra * firstDays / 365;
                 return ra * Math.round((addM(sd, k - 1) - addM(sd, k - 2)) / 86400000) / 365;
             };
-            const annuity = (bal, months) => months <= 0 ? bal : (i === 0 ? bal / months : bal * i / (1 - Math.pow(1 + i, -months)));
+            // 銀行實務：月付金與每期利息皆計算至「元」（四捨五入）
+            const annuity = (bal, months) => months <= 0 ? bal : Math.round(i === 0 ? bal / months : bal * i / (1 - Math.pow(1 + i, -months)));
 
             // 起始月付：本息平均優先採用使用者填的實際金額（銀行進位/自行多繳）
             let pay;
@@ -1039,7 +1040,7 @@
                 const theo = annuity(P, n), actual = parseFloat(loan.monthly) || 0;
                 pay = (actual > 0 && Math.abs(actual - theo) >= 1) ? actual : theo;
             } else if (method === 'grace') pay = annuity(P, n - g);   // 寬限期滿後的月付
-            else pay = P / n;                                          // 本金平均：每期本金
+            else pay = Math.round(P / n);                              // 本金平均：每期本金（計至元）
 
             // 提前還款依所屬期數分組
             const pre = {};
@@ -1050,8 +1051,9 @@
 
             // 跑一期：回傳新餘額（並累計利息）
             const runPeriod = (bal, k, payAmt, acc) => {
-                const r = periodRate(k), int = bal * r;
+                const r = periodRate(k), int = Math.round(bal * r);   // 每期利息計至元（四捨五入）
                 if (acc) acc.interestPaid += int;
+                if (k >= n) return 0;                                                           // 最後一期由銀行調整金額結清（日計息尾差）
                 if (method === 'principal') return Math.max(0, bal - Math.min(payAmt, bal));   // 只扣本金，利息另繳
                 if (method === 'grace' && k <= g) return bal;                                   // 寬限期只繳息
                 return Math.max(0, bal + int - payAmt);
