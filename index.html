@@ -289,16 +289,19 @@
             <!-- 歷史換匯紀錄 -->
             <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-cyan-100 dark:border-cyan-900 border-t-4 border-t-cyan-500">
                 <h2 class="text-xl font-bold mb-4 flex items-center dark:text-gray-200"><span class="text-cyan-500 mr-2">💱</span> <span data-i18n="exchangeHistTitle">歷史換匯紀錄</span></h2>
-                <form id="exchangeHistForm" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 items-end">
+                <form id="exchangeHistForm" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
+                    <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">類型</label><select id="exDirection" onchange="window.handleExDirectionChange()" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white"><option value="buy">買入（台幣 → 外幣）</option><option value="sell">賣出（外幣 → 台幣）</option></select></div>
                     <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300" data-i18n="colTime">時間</label><input type="date" id="exDate" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" required></div>
-                    <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300" data-i18n="colCurrency">幣別</label><select id="exCurrency" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white"><option value="USD">美金 (USD)</option><option value="JPY">日圓 (JPY)</option><option value="EUR">歐元 (EUR)</option><option value="KRW">韓元 (KRW)</option></select></div>
+                    <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300" data-i18n="colCurrency">幣別</label><select id="exCurrency" onchange="window.handleExDirectionChange()" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white"><option value="USD">美金 (USD)</option><option value="JPY">日圓 (JPY)</option><option value="EUR">歐元 (EUR)</option><option value="KRW">韓元 (KRW)</option></select></div>
                     <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300"><span data-i18n="colExAmount">換匯金額</span> (該幣別)</label><input type="number" step="0.01" id="exAmount" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" required placeholder="如: 1000"></div>
                     <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300"><span data-i18n="colRate">匯率</span> (對台幣)</label><input type="number" step="0.0001" id="exRate" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" required placeholder="如: 32.5"></div>
-                    <div class="min-w-0"><button type="submit" class="w-full h-[42px] bg-cyan-500 hover:bg-cyan-600 text-white font-bold rounded" data-i18n="save">儲存</button></div>
+                    <div class="min-w-0 hidden" id="exLinkWrap"><label class="block text-sm mb-1 dark:text-gray-300">對應買入 <span class="text-xs text-gray-400">(選填)</span></label><select id="exLinkBuy" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white"><option value="">依加權均價</option></select></div>
+                    <div class="min-w-0 flex gap-2"><button type="submit" id="exSubmitBtn" class="flex-1 h-[42px] bg-cyan-500 hover:bg-cyan-600 text-white font-bold rounded" data-i18n="save">儲存</button><button type="button" id="exCancelBtn" onclick="window.cancelEditExchange()" class="hidden flex-1 h-[42px] bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 dark:text-white font-bold rounded">取消</button></div>
                 </form>
+                <p id="exSellHint" class="hidden mt-3 text-xs text-gray-500 dark:text-gray-400"></p>
                 <div class="mt-6 overflow-x-auto border dark:border-gray-700 rounded-lg">
-                    <table class="w-full text-left border-collapse min-w-[640px] text-sm">
-                        <thead class="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600 text-gray-600 dark:text-gray-300"><tr><th class="p-3" data-i18n="colTime">時間</th><th class="p-3" data-i18n="colCurrency">幣別</th><th class="p-3 text-right" data-i18n="colExAmount">換匯金額</th><th class="p-3 text-right" data-i18n="colExRate">換匯匯率</th><th class="p-3 text-right" data-i18n="colNowRate">現在匯率</th><th class="p-3 text-right" data-i18n="colPnl">盈虧</th><th class="p-3 text-center">操作</th></tr></thead>
+                    <table class="w-full text-left border-collapse min-w-[780px] text-sm">
+                        <thead class="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600 text-gray-600 dark:text-gray-300"><tr><th class="p-3" data-i18n="colTime">時間</th><th class="p-3">類型</th><th class="p-3" data-i18n="colCurrency">幣別</th><th class="p-3 text-right" data-i18n="colExAmount">換匯金額</th><th class="p-3 text-right" data-i18n="colExRate">換匯匯率</th><th class="p-3 text-right" data-i18n="colNowRate">現在匯率</th><th class="p-3 text-right" data-i18n="colPnl">盈虧</th><th class="p-3 text-center">操作</th></tr></thead>
                         <tbody id="exchangeHistBody" class="divide-y dark:divide-gray-700"></tbody>
                     </table>
                 </div>
@@ -812,14 +815,40 @@
             // 歷史換匯紀錄：新增
             document.getElementById("exchangeHistForm").addEventListener("submit", function(e) {
                 e.preventDefault();
+                const editId = window.editingExchangeId;
+                const direction = document.getElementById("exDirection").value;
                 const date = document.getElementById("exDate").value;
                 const currency = document.getElementById("exCurrency").value;
                 const amount = parseFloat(document.getElementById("exAmount").value);
                 const rate = parseFloat(document.getElementById("exRate").value);
                 if (!date || !currency || isNaN(rate) || rate <= 0) return showToast("❌ 請填寫完整且匯率需大於 0");
                 if (isNaN(amount) || amount <= 0) return showToast("❌ 換匯金額需大於 0");
-                window.exchangeHistory.push({ id: Date.now(), date, currency, amount, rate });
-                this.reset(); saveData(); window.renderExchangeHistTable(); showToast("✅ 換匯紀錄已新增");
+                const fmtAmt = (n) => n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+                const label = currencyLabels[currency] || currency;
+                const other = window.exCalc(currency, editId); // 排除自己後的該幣別部位
+                const rec = { id: editId || Date.now(), date, currency, amount, rate, direction };
+                if (direction === 'sell') {
+                    if (other.remaining <= 0) return showToast(`❌ 目前沒有 ${label} 部位可賣出`);
+                    if (amount > other.remaining + 1e-6) return showToast(`❌ 賣出超過持有量，目前僅有 ${fmtAmt(other.remaining)}`);
+                    const linkId = Number(document.getElementById("exLinkBuy").value) || null;
+                    if (linkId) {
+                        const lot = window.exchangeHistory.find(x => x.id === linkId);
+                        if (!lot) return showToast("❌ 找不到對應的買入紀錄");
+                        const left = window.exLotRemaining(editId)[linkId] || 0;
+                        if (amount > left + 1e-6) return showToast(`❌ 該筆買入僅剩 ${fmtAmt(left)}`);
+                        rec.linkId = linkId; rec.costRate = lot.rate;
+                    } else { rec.linkId = null; rec.costRate = other.avg; }
+                } else if (editId) {
+                    // 改小買入金額時，不能少於已經指定從這筆賣出的量，也不能讓整體部位變負數
+                    const linkedSold = window.exchangeHistory.reduce((s, x) => s + ((x.linkId === editId && exDir(x) === 'sell') ? (x.amount || 0) : 0), 0);
+                    if (amount < linkedSold - 1e-6) return showToast(`❌ 已有 ${fmtAmt(linkedSold)} 指定從這筆賣出，金額不可低於此數`);
+                    if (other.remaining + amount < -1e-6) return showToast(`❌ 金額過小，${label} 部位會變成負數`);
+                }
+                if (editId) { const i = window.exchangeHistory.findIndex(x => x.id === editId); if (i >= 0) window.exchangeHistory[i] = rec; else window.exchangeHistory.push(rec); }
+                else window.exchangeHistory.push(rec);
+                window.cancelEditExchange();
+                saveData(); window.renderExchangeHistTable();
+                showToast(editId ? "✅ 換匯紀錄已更新" : "✅ 換匯紀錄已新增");
             });
 
             // 資金總覽：新增貸款
@@ -934,41 +963,135 @@
         const currencyLabels = { USD: '美金 (USD)', JPY: '日圓 (JPY)', EUR: '歐元 (EUR)', KRW: '韓元 (KRW)', TWD: '台幣 (TWD)' };
         const currencyToRateKey = { USD: '美股', JPY: '日股', EUR: '歐元', KRW: '韓股' };
         window.getNowRate = function(currency) { const k = currencyToRateKey[currency]; return k ? (window.exchangeRates[k] || 0) : 1; };
+        // 舊資料沒有 direction 欄位，一律視為買入（台幣 → 外幣）
+        const exDir = (r) => (r.direction === 'sell' ? 'sell' : 'buy');
+        window.editingExchangeId = null;
+        // 每筆買入的剩餘外幣金額（扣掉有指定對應的賣出）。editing 時要排除自己，否則會重複計算。
+        window.exLotRemaining = function(excludeId) {
+            const map = {};
+            window.exchangeHistory.forEach(r => { if (r.id !== excludeId && exDir(r) === 'buy') map[r.id] = r.amount || 0; });
+            window.exchangeHistory.forEach(r => { if (r.id !== excludeId && exDir(r) === 'sell' && r.linkId && map[r.linkId] !== undefined) map[r.linkId] -= (r.amount || 0); });
+            return map;
+        };
+        // 單一幣別的持有部位、剩餘成本與已實現損益。
+        // 剩餘成本 = 買入成本 − 已賣出部分的成本，指定對應與依均價兩種賣法都適用。
+        window.exCalc = function(cur, excludeId) {
+            let amt = 0, cost = 0, realized = 0;
+            window.exchangeHistory.forEach(r => {
+                if (r.currency !== cur || r.id === excludeId) return;
+                const a = r.amount || 0;
+                if (exDir(r) === 'buy') { amt += a; cost += a * (r.rate || 0); }
+                else { const cr = (typeof r.costRate === 'number') ? r.costRate : 0; amt -= a; cost -= a * cr; realized += a * ((r.rate || 0) - cr); }
+            });
+            const remaining = Math.round(amt * 1e6) / 1e6;
+            return { remaining, avg: remaining > 0 ? cost / remaining : 0, realized };
+        };
+        // 切換買入/賣出，或換幣別時：重建「對應買入」選單並更新可賣出提示
+        window.handleExDirectionChange = function() {
+            const dirEl = document.getElementById('exDirection'); if (!dirEl) return;
+            const dir = dirEl.value, cur = document.getElementById('exCurrency').value;
+            const wrap = document.getElementById('exLinkWrap'), sel = document.getElementById('exLinkBuy'), hint = document.getElementById('exSellHint');
+            wrap.classList.toggle('hidden', dir !== 'sell');
+            hint.classList.toggle('hidden', dir !== 'sell');
+            if (dir !== 'sell') return;
+            const rem = window.exLotRemaining(window.editingExchangeId);
+            const keep = sel.value;
+            const lots = window.exchangeHistory.filter(r => exDir(r) === 'buy' && r.currency === cur && r.id !== window.editingExchangeId && (rem[r.id] || 0) > 0).sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+            sel.innerHTML = '<option value="">依加權均價</option>' + lots.map(l => `<option value="${l.id}">${l.date}　@${l.rate}　剩 ${rem[l.id].toLocaleString(undefined, { maximumFractionDigits: 2 })}</option>`).join('');
+            if (keep && sel.querySelector(`option[value="${keep}"]`)) sel.value = keep;
+            const c = window.exCalc(cur, window.editingExchangeId);
+            const label = currencyLabels[cur] || cur;
+            hint.textContent = c.remaining > 0 ? `目前 ${label} 可賣出 ${c.remaining.toLocaleString(undefined, { maximumFractionDigits: 2 })}，加權均價 ${c.avg.toFixed(4)}` : `目前沒有 ${label} 部位可賣出，請先新增買入紀錄`;
+        };
+        window.editExchangeHist = function(id) {
+            const r = window.exchangeHistory.find(x => x.id === id); if (!r) return;
+            window.editingExchangeId = id;
+            document.getElementById('exDirection').value = exDir(r);
+            document.getElementById('exDate').value = r.date || '';
+            document.getElementById('exCurrency').value = r.currency;
+            document.getElementById('exAmount').value = r.amount;
+            document.getElementById('exRate').value = r.rate;
+            window.handleExDirectionChange();
+            if (exDir(r) === 'sell') document.getElementById('exLinkBuy').value = r.linkId || '';
+            document.getElementById('exSubmitBtn').textContent = '更新';
+            document.getElementById('exSubmitBtn').removeAttribute('data-i18n'); // 避免語言切換時被覆寫回「儲存」
+            document.getElementById('exCancelBtn').classList.remove('hidden');
+            document.getElementById('exchangeHistForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            showToast('✏️ 請在上方修改後按「更新」');
+        };
+        window.cancelEditExchange = function() {
+            window.editingExchangeId = null;
+            const f = document.getElementById('exchangeHistForm'); f.reset();
+            const btn = document.getElementById('exSubmitBtn');
+            btn.textContent = '儲存'; btn.setAttribute('data-i18n', 'save');
+            document.getElementById('exCancelBtn').classList.add('hidden');
+            window.handleExDirectionChange();
+        };
         window.renderExchangeHistTable = function() {
             const tb = document.getElementById("exchangeHistBody"); if (!tb) return;
+            const rem = window.exLotRemaining(null);
             const sorted = [...window.exchangeHistory].sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
             tb.innerHTML = sorted.map(r => {
+                const dir = exDir(r);
                 const nowRate = window.getNowRate(r.currency);
                 const hasAmt = (typeof r.amount === 'number' && r.amount > 0);
+                const left = (dir === 'buy' && typeof rem[r.id] === 'number') ? Math.max(rem[r.id], 0) : null;
                 let pnlCell = '<span class="text-gray-400">-</span>';
-                if (r.rate > 0 && nowRate > 0) {
+                if (dir === 'sell') {
+                    const cr = (typeof r.costRate === 'number') ? r.costRate : 0;
+                    if (cr > 0 && hasAmt && r.rate > 0) {
+                        const diff = (r.rate - cr) * r.amount, pct = (r.rate - cr) / cr * 100;
+                        const cls = diff >= 0 ? 'text-profit' : 'text-loss', sign = diff >= 0 ? '+' : '';
+                        pnlCell = `<span class="${cls} font-bold">${sign}${pct.toFixed(2)}%<br><span class="text-xs">已實現 ${sign}${window.formatCurrency(diff)}</span></span>`;
+                    }
+                } else if (left !== null && left <= 0) {
+                    pnlCell = '<span class="text-xs text-gray-400">已全數換回</span>';
+                } else if (r.rate > 0 && nowRate > 0) {
+                    const base = (left !== null) ? left : (hasAmt ? r.amount : 0);
                     const pct = (nowRate - r.rate) / r.rate * 100;
-                    const cls = pct >= 0 ? 'text-profit' : 'text-loss';
-                    const sign = pct >= 0 ? '+' : '';
-                    const abs = hasAmt ? `<br><span class="text-xs">${sign}${window.formatCurrency(r.amount * (nowRate - r.rate))}</span>` : '';
+                    const cls = pct >= 0 ? 'text-profit' : 'text-loss', sign = pct >= 0 ? '+' : '';
+                    const abs = base > 0 ? `<br><span class="text-xs">${sign}${window.formatCurrency(base * (nowRate - r.rate))}</span>` : '';
                     pnlCell = `<span class="${cls} font-bold">${sign}${pct.toFixed(2)}%${abs}</span>`;
                 }
-                return `<tr class="hover:bg-gray-100 dark:hover:bg-gray-600"><td class="p-3">${r.date}</td><td class="p-3">${currencyLabels[r.currency] || r.currency}</td><td class="p-3 text-right font-mono">${hasAmt ? r.amount.toLocaleString() : '-'}</td><td class="p-3 text-right font-mono text-cyan-600 dark:text-cyan-400">${r.rate}</td><td class="p-3 text-right font-mono">${nowRate ? nowRate.toFixed(4) : '-'}</td><td class="p-3 text-right">${pnlCell}</td><td class="p-3 text-center"><button onclick="window.deleteExchangeHist(${r.id})" class="text-xs bg-red-50 text-red-500 px-2 py-1 rounded">刪除</button></td></tr>`;
+                const typeCell = dir === 'sell'
+                    ? '<span class="px-2 py-0.5 rounded text-xs font-bold bg-amber-50 text-amber-600 dark:bg-amber-900 dark:text-amber-300">賣出</span>'
+                    : '<span class="px-2 py-0.5 rounded text-xs font-bold bg-cyan-50 text-cyan-600 dark:bg-cyan-900 dark:text-cyan-300">買入</span>';
+                const amtSub = (left !== null && hasAmt && left < r.amount) ? `<br><span class="text-xs text-gray-400">剩 ${left.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>` : '';
+                const linkSub = (dir === 'sell' && r.linkId) ? `<br><span class="text-xs text-gray-400">指定 @${(window.exchangeHistory.find(x => x.id === r.linkId) || {}).rate ?? '-'}</span>` : '';
+                return `<tr class="hover:bg-gray-100 dark:hover:bg-gray-600"><td class="p-3">${r.date}</td><td class="p-3">${typeCell}</td><td class="p-3">${currencyLabels[r.currency] || r.currency}</td><td class="p-3 text-right font-mono">${hasAmt ? r.amount.toLocaleString() : '-'}${amtSub}</td><td class="p-3 text-right font-mono text-cyan-600 dark:text-cyan-400">${r.rate}${linkSub}</td><td class="p-3 text-right font-mono">${nowRate ? nowRate.toFixed(4) : '-'}</td><td class="p-3 text-right">${pnlCell}</td><td class="p-3 text-center whitespace-nowrap"><button onclick="window.editExchangeHist(${r.id})" class="text-xs bg-blue-50 text-blue-500 px-2 py-1 rounded mr-1">修改</button><button onclick="window.deleteExchangeHist(${r.id})" class="text-xs bg-red-50 text-red-500 px-2 py-1 rounded">刪除</button></td></tr>`;
             }).join('');
-            // 各幣別彙總卡片（總金額、加權均價、依現在匯率的盈虧）
+            // 各幣別彙總卡片（持有金額、剩餘部位均價、未實現與已實現損益）
             const sc = document.getElementById('exchangeSummaryCards');
             if (sc) {
-                const byCur = {};
-                window.exchangeHistory.forEach(r => {
-                    if (!(typeof r.amount === 'number' && r.amount > 0 && r.rate > 0)) return;
-                    if (!byCur[r.currency]) byCur[r.currency] = { amt: 0, cost: 0 };
-                    byCur[r.currency].amt += r.amount; byCur[r.currency].cost += r.amount * r.rate;
-                });
-                const cards = Object.keys(byCur).map(cur => {
-                    const o = byCur[cur]; const avg = o.cost / o.amt; const now = window.getNowRate(cur);
-                    let pnlHtml = '<span class="text-gray-400">-</span>';
-                    if (now > 0) { const pct = (now - avg) / avg * 100; const cls = pct >= 0 ? 'text-profit' : 'text-loss'; const sign = pct >= 0 ? '+' : ''; pnlHtml = `<span class="${cls}">${sign}${pct.toFixed(2)}%　${sign}${window.formatCurrency(o.amt * (now - avg))}</span>`; }
-                    return `<div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border dark:border-gray-700"><div class="flex items-center justify-between mb-2"><span class="text-sm font-bold text-gray-500 dark:text-gray-400">💱 ${currencyLabels[cur] || cur}</span><span class="text-xs text-gray-400">均價 ${avg.toFixed(4)}</span></div><div class="text-2xl font-bold text-slate-700 dark:text-white mb-1">${o.amt.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div><div class="text-sm font-bold">${pnlHtml}</div></div>`;
-                });
+                const curs = [...new Set(window.exchangeHistory.map(r => r.currency))];
+                const cards = curs.map(cur => {
+                    const c = window.exCalc(cur, null);
+                    if (c.remaining <= 0 && Math.abs(c.realized) < 0.005) return null;
+                    const now = window.getNowRate(cur);
+                    let unreal = '<span class="text-gray-400">-</span>';
+                    if (c.remaining > 0 && c.avg > 0 && now > 0) {
+                        const pct = (now - c.avg) / c.avg * 100, cls = pct >= 0 ? 'text-profit' : 'text-loss', sign = pct >= 0 ? '+' : '';
+                        unreal = `<span class="${cls}">${sign}${pct.toFixed(2)}%　${sign}${window.formatCurrency(c.remaining * (now - c.avg))}</span>`;
+                    }
+                    const rCls = c.realized >= 0 ? 'text-profit' : 'text-loss', rSign = c.realized >= 0 ? '+' : '';
+                    const realHtml = Math.abs(c.realized) < 0.005 ? '<span class="text-gray-400">-</span>' : `<span class="${rCls}">${rSign}${window.formatCurrency(c.realized)}</span>`;
+                    const avgTxt = c.remaining > 0 ? `均價 ${c.avg.toFixed(4)}` : '已全數換回';
+                    return `<div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border dark:border-gray-700"><div class="flex items-center justify-between mb-2"><span class="text-sm font-bold text-gray-500 dark:text-gray-400">💱 ${currencyLabels[cur] || cur}</span><span class="text-xs text-gray-400">${avgTxt}</span></div><div class="text-2xl font-bold text-slate-700 dark:text-white mb-2">${c.remaining.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div><div class="text-sm font-bold flex justify-between"><span class="text-xs font-normal text-gray-400 self-center">未實現</span>${unreal}</div><div class="text-sm font-bold flex justify-between border-t dark:border-gray-700 mt-1 pt-1"><span class="text-xs font-normal text-gray-400 self-center">已實現</span>${realHtml}</div></div>`;
+                }).filter(Boolean);
                 sc.innerHTML = cards.length ? cards.join('') : `<div class="col-span-full text-center text-sm text-gray-400 py-6 bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700">尚無換匯紀錄，請在下方新增第一筆 💱</div>`;
             }
+            window.handleExDirectionChange();
         };
-        window.deleteExchangeHist = function(id) { window.exchangeHistory = window.exchangeHistory.filter(r => r.id !== id); saveData(); window.renderExchangeHistTable(); showToast("🗑️ 已刪除"); };
+        window.deleteExchangeHist = function(id) {
+            const r = window.exchangeHistory.find(x => x.id === id); if (!r) return;
+            // 刪掉買入時，指定對應到它的賣出改回依均價（costRate 已存在紀錄裡，損益不受影響）
+            let unlinked = 0;
+            if (exDir(r) === 'buy') window.exchangeHistory.forEach(x => { if (x.linkId === id) { x.linkId = null; unlinked++; } });
+            window.exchangeHistory = window.exchangeHistory.filter(x => x.id !== id);
+            if (window.editingExchangeId === id) window.cancelEditExchange();
+            saveData(); window.renderExchangeHistTable();
+            showToast(unlinked ? `🗑️ 已刪除，${unlinked} 筆賣出改為依均價` : "🗑️ 已刪除");
+        };
 
         // ===== 資金總覽：貸款試算 =====
         const loanMethodLabels = { annuity: '本息平均攤還', principal: '本金平均攤還', grace: '寬限期繳息後繳本' };
