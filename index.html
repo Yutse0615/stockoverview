@@ -315,7 +315,6 @@
                 <div class="flex flex-wrap items-end justify-between gap-4 mb-4">
                     <div>
                         <h2 class="text-xl font-bold flex items-center dark:text-gray-200"><span class="text-indigo-500 mr-2">📊</span> 資金累積圖</h2>
-                        <p class="text-xs text-gray-400 mt-1">由下而上：現金 → 台股成本 → 美股成本 → 未實現損益（以目前股價計算），最上緣即現金＋市值</p>
                     </div>
                     <div class="flex items-end gap-4">
                         <div><label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">期間</label><select id="fundsRange" onchange="window.renderFundsChart()" class="h-[38px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white text-sm"><option value="30">近 30 天</option><option value="180" selected>近 6 個月</option><option value="365">近 1 年</option><option value="all">全部</option></select></div>
@@ -323,6 +322,7 @@
                     </div>
                 </div>
                 <div class="relative w-full h-80"><canvas id="chartFundsFlow"></canvas></div>
+                <p class="text-xs text-gray-400 mt-3">由下而上：現金 → 台股成本 → 美股成本 → 未實現損益（以目前股價計算），最上緣即現金＋市值</p>
             </div>
 
             <!-- 還款進度總覽 -->
@@ -1519,6 +1519,7 @@
             ch.options.scales.y.ticks.color = tick;
             ch.options.scales.y.grid.color = grid;
             ch.options.scales.y.beginAtZero = true;
+            ch.options.scales.y.ticks.callback = (v, i, ticks) => fundsAxisTick(v, ticks);
             ch.update();
             const el = document.getElementById('fundsTotalNow');
             if (el) {
@@ -1621,6 +1622,16 @@
 
         Chart.register(ChartDataLabels); Chart.register({ id: 'centerText', beforeDraw: function(c) { if (c.config.type !== 'doughnut') return; let cx = c.ctx; let a = c.chartArea; if (!a) return; let cX = (a.left + a.right)/2; let cY = (a.top + a.bottom)/2; cx.restore(); let fs = ((a.bottom-a.top)/160).toFixed(2); cx.font = "bold "+fs+"em sans-serif"; cx.textBaseline = "middle"; cx.textAlign = "center"; cx.fillStyle = document.documentElement.classList.contains('dark')?"#f1f5f9":"#475569"; let t = c.customNetTotal!==undefined?c.customNetTotal:(c.data.datasets[0].data.length>0?c.data.datasets[0].data.reduce((a,b)=>a+(b||0),0):0); cx.fillText(window.formatCurrency(Math.round(t),true), cX, cY-10); let sfs = ((a.bottom-a.top)/300).toFixed(2); cx.font = "normal "+sfs+"em sans-serif"; cx.fillStyle = "#94a3b8"; cx.fillText(c.customSubtitle||window.t('cTotal'), cX, cY+22); cx.save(); } });
         function getPOpts() { return { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, color: document.documentElement.classList.contains('dark')?'#e2e8f0':'#475569', generateLabels: function(c) { const d=c.data; if(!d.labels.length)return []; return d.labels.map((l,i)=>{ const s=c.getDatasetMeta(0).controller.getStyle(i); const v=d.datasets[0].data[i]||0; const t=d.datasets[0].data.reduce((a,b)=>a+(b||0),0); const p=t>0?Math.round((v/t)*100):0; return {text:`${l} (${p}%)`, fillStyle:s.backgroundColor, strokeStyle:s.borderColor, lineWidth:s.borderWidth, hidden:isNaN(v)||c.getDatasetMeta(0).data[i].hidden, index:i};});}}}, datalabels: { display: false }, tooltip: { callbacks: { label: function(c) { const t=c.dataset.data.reduce((a,b)=>a+(b||0),0); const p=t>0?Math.round((c.raw/t)*100):0; return ` ${c.label}: ${window.formatCurrency(Math.round(c.raw),true)} (${p}%)`; } } } } }; }
+        // Y 軸刻度：整條軸的最大值超過百萬就一律用 M、超過萬就用 K，
+        // 讓所有刻度單位一致，避免 NT$4,500,000 這種長字串把軸擠爆。
+        function fundsAxisTick(v, ticks) {
+            const max = (ticks && ticks.length) ? Math.max(...ticks.map(t => Math.abs(t.value))) : Math.abs(v);
+            if (max < 1e4) return window.formatCurrency(v, true);
+            const sym = window.getCurrencySymbol(), sign = v < 0 ? '-' : '', a = Math.abs(v);
+            if (a === 0) return `${sym}0`;   // 零刻度不該顯示成 0M
+            const trim = (n) => parseFloat(n.toFixed(Math.abs(n) >= 100 ? 0 : (Math.abs(n) >= 10 ? 1 : 2)));
+            return max >= 1e6 ? `${sign}${sym}${trim(a / 1e6)}M` : `${sign}${sym}${trim(a / 1e3)}K`;
+        }
         function getFundsOpts() {
             const dark = document.documentElement.classList.contains('dark');
             const tick = dark ? '#94a3b8' : '#64748b', grid = dark ? 'rgba(148,163,184,.15)' : 'rgba(100,116,139,.12)';
@@ -1629,7 +1640,7 @@
                     tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${window.formatCurrency(Math.round(c.parsed.y), true)}` } } },
                 scales: { x: { stacked: true, grid: { display: false }, ticks: { color: tick, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
                           // 必須從 0 起算，否則最底層（現金）會被切在軸線下方而看不見
-                          y: { stacked: true, beginAtZero: true, grid: { color: grid }, ticks: { color: tick, callback: (v) => window.formatCurrency(v, true) } } } };
+                          y: { stacked: true, beginAtZero: true, grid: { color: grid }, ticks: { color: tick, callback: (v, i, ticks) => fundsAxisTick(v, ticks) } } } };
         }
         window.destroyAllCharts = function() { window.chartsReady = false; ['chartCountry','chartAssetType','chartUnrealized','chartRealized','chartDivBroker','chartDivCountry','chartFundsFlow'].forEach(id => { if(window[id] && typeof window[id].destroy === 'function'){window[id].destroy();window[id]=null;} }); }
         function initCharts() { window.destroyAllCharts(); window.chartCountry = new Chart(document.getElementById('chartCountry'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartAssetType = new Chart(document.getElementById('chartAssetType'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartUnrealized = new Chart(document.getElementById('chartUnrealized'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartRealized = new Chart(document.getElementById('chartRealized'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartDivBroker = new Chart(document.getElementById('chartDivBroker'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartDivCountry = new Chart(document.getElementById('chartDivCountry'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartFundsFlow = new Chart(document.getElementById('chartFundsFlow'), {type:'line',data:{labels:[],datasets:[]},options:getFundsOpts()}); window.chartsReady = true; window.renderFundsChart(); }
