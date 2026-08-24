@@ -210,7 +210,7 @@
                 </div>
                 <table class="w-full text-left border-collapse min-w-[1000px]"><thead id="buyThead"></thead><tbody id="buyTableBody" class="divide-y dark:divide-gray-700"></tbody></table>
             </div>
-            <div class="mb-8 pl-2 text-sm font-medium text-gray-500 dark:text-gray-400">💡 註：報價每日自動更新兩次（台股收盤後、美股收盤後），開啟頁面時自動套用最新收盤價</div>
+            <div id="priceUpdateHint" class="mb-8 pl-2 text-sm font-medium text-gray-500 dark:text-gray-400">💡 註：報價每日自動更新兩次（台股收盤後、美股收盤後），開啟頁面時自動套用最新收盤價</div>
 
             <!-- 交易表格 -->
             <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-x-auto transition-colors">
@@ -315,7 +315,7 @@
                 <div class="flex flex-wrap items-end justify-between gap-4 mb-4">
                     <div>
                         <h2 class="text-xl font-bold flex items-center dark:text-gray-200"><span class="text-indigo-500 mr-2">📊</span> 資金累積圖</h2>
-                        <p class="text-xs text-gray-400 mt-1">依投入成本計算：股票為買進成本×當時匯率，貸款為剩餘本金</p>
+                        <p class="text-xs text-gray-400 mt-1">依投入成本計算：股票為買進成本×當時匯率，現金為累計餘額</p>
                     </div>
                     <div class="flex items-end gap-4">
                         <div><label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">期間</label><select id="fundsRange" onchange="window.renderFundsChart()" class="h-[38px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white text-sm"><option value="30">近 30 天</option><option value="180" selected>近 6 個月</option><option value="365">近 1 年</option><option value="all">全部</option></select></div>
@@ -604,8 +604,9 @@
             try {
                 if (!window.buyRecords.some(r => r.country === '台股' || r.country === '美股')) return false;
                 let twMarket = null, usMarket = null;
-                try { const ms = await getDoc(doc(db, 'daily_market', 'taiwan_stock_all')); if (ms.exists()) { twMarket = ms.data().stocks || null; if (twMarket) Object.keys(twMarket).forEach(c => { if (twMarket[c].name) window.stockDict[c] = twMarket[c].name; }); } } catch (e) { console.warn("台股每日資料讀取失敗", e); }
-                try { const ms = await getDoc(doc(db, 'daily_market', 'us_stock_all')); if (ms.exists()) usMarket = ms.data().stocks || null; } catch (e) { console.warn("美股每日資料讀取失敗", e); }
+                window._marketMeta = { tw: null, us: null };
+                try { const ms = await getDoc(doc(db, 'daily_market', 'taiwan_stock_all')); if (ms.exists()) { const dd = ms.data(); twMarket = dd.stocks || null; window._marketMeta.tw = { date: dd.date || null, fetched: dd.lastUpdated || null }; if (twMarket) Object.keys(twMarket).forEach(c => { if (twMarket[c].name) window.stockDict[c] = twMarket[c].name; }); } } catch (e) { console.warn("台股每日資料讀取失敗", e); }
+                try { const ms = await getDoc(doc(db, 'daily_market', 'us_stock_all')); if (ms.exists()) { const dd = ms.data(); usMarket = dd.stocks || null; window._marketMeta.us = { date: dd.date || null, fetched: dd.lastUpdated || null }; } } catch (e) { console.warn("美股每日資料讀取失敗", e); }
                 const canon = (s) => String(s).toUpperCase().replace(/[.\-/]/g, "");
                 const buildCanon = (m) => { const o = {}; if (m) Object.keys(m).forEach(k => { o[canon(k)] = m[k]; }); return o; };
                 const twCanon = buildCanon(twMarket), usCanon = buildCanon(usMarket);
@@ -623,6 +624,28 @@
                 return true;
             } catch (e) { console.warn('自動更新報價失敗', e); return false; }
         }
+
+        // 報價來源提示：資料日期取自 daily_market 文件的 date，取得時間取自 lastUpdated（顯示為使用者本地時間）
+        window.renderPriceUpdateHint = function() {
+            const el = document.getElementById('priceUpdateHint'); if (!el) return;
+            const DEFAULT = '💡 註：報價每日自動更新兩次（台股收盤後、美股收盤後），開啟頁面時自動套用最新收盤價';
+            const m = window._marketMeta;
+            if (!m || (!m.tw && !m.us)) { el.textContent = DEFAULT; return; }
+            const md = (s) => {                       // 台股為 20260824、美股為 2026-08-24
+                const t = String(s || '').replace(/-/g, '');
+                return t.length === 8 ? `${parseInt(t.slice(4, 6), 10)}/${parseInt(t.slice(6, 8), 10)}` : null;
+            };
+            const ft = (iso) => { const d = new Date(iso || ''); return isNaN(d) ? null : `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+            const held = { tw: false, us: false };
+            window.buyRecords.forEach(r => { if (r.country === '台股') held.tw = true; else if (r.country === '美股') held.us = true; });
+            const parts = [];
+            [['tw', '台股'], ['us', '美股']].forEach(([k, label]) => {
+                if (!held[k] || !m[k] || !md(m[k].date)) return;
+                const f = ft(m[k].fetched);
+                parts.push(`${label} ${md(m[k].date)} 收盤價${f ? `（${f} 取得）` : ''}`);
+            });
+            el.textContent = parts.length ? `💡 目前顯示的報價：${parts.join('　・　')}　—　每交易日收盤後自動更新，開啟頁面時套用` : DEFAULT;
+        };
 
         // 📊 今日損益速報：與前一交易日收盤相比，每檔與總計都附百分比
         window.closeDailyPnl = function() { document.getElementById('dailyPnlModal').classList.add('hidden'); window.unlockBodyScroll(); };
@@ -756,7 +779,7 @@
         const getDisplayName = (sym, cty) => (cty === '台股' && window.stockDict[sym]) ? `${sym} ${window.stockDict[sym]}` : sym;
 
         window.updateAll = function() { 
-            window.updateBrokerDropdowns(); window.updateNoteDropdowns(); window.renderFeeRulesTable(); window.renderExchangeHistTable(); window.renderLoanTable(); window.renderCashTable(); window.renderFundsChart();
+            window.updateBrokerDropdowns(); window.updateNoteDropdowns(); window.renderFeeRulesTable(); window.renderExchangeHistTable(); window.renderLoanTable(); window.renderCashTable(); window.renderFundsChart(); window.renderPriceUpdateHint();
             document.querySelectorAll('[data-i18n]').forEach(el => { const k = el.getAttribute('data-i18n'); if (translations[window.currentLang] && translations[window.currentLang][k]) el.innerHTML = translations[window.currentLang][k]; });
             ['buy', 'sell', 'div'].forEach(t => { const isSum = window.viewModes[t] === 'summary'; const bs = document.getElementById(`btn${t.charAt(0).toUpperCase() + t.slice(1)}Summary`); const bd = document.getElementById(`btn${t.charAt(0).toUpperCase() + t.slice(1)}Detail`); if(bs && bd) { bs.className = isSum ? "bg-white shadow text-blue-600 px-3 py-1 text-xs font-bold rounded" : "text-gray-500 hover:text-gray-700 px-3 py-1 text-xs font-bold rounded"; bd.className = isSum ? "text-gray-500 hover:text-gray-700 px-3 py-1 text-xs font-bold rounded" : "bg-white shadow text-blue-600 px-3 py-1 text-xs font-bold rounded"; } });
             renderTables(); window.updateDropdowns(); renderCharts();
@@ -1367,19 +1390,21 @@
 
         // ===== 資金累積圖 =====
         // 歷史市價沒有留存，故一律以「投入成本」為基準：
-        //   台股／債券／美股 = 買進成本 × 當時匯率。注意只計目前仍持有的部位，
+        //   台股／美股 = 買進成本 × 當時匯率。注意只計目前仍持有的部位，
         //   已全數賣出的舊部位在 buyRecords 中已被移除、無買進日可回溯。
-        //   貸款 = 該時點的剩餘本金；現金 = 該時點的累計餘額。
-        const fundsSeriesDef = [
-            { key: 'tw',    label: '台股', color: '#16a34a' },
-            { key: 'bond',  label: '債券', color: '#38bdf8' },
-            { key: 'us',    label: '美股', color: '#1e40af' },
-            { key: 'other', label: '其他', color: '#94a3b8' },
-            { key: 'loan',  label: '貸款', color: '#ef4444' },
-            { key: 'cash',  label: '現金', color: '#f59e0b' }
-        ];
-        // 債券跨市場，故先抽出來自成一類，其餘再依市場分
-        const fundsBucket = (r) => r.type === '債券' ? 'bond' : (r.country === '台股' ? 'tw' : (r.country === '美股' ? 'us' : 'other'));
+        //   現金 = 該時點的累計餘額。
+        // 顏色取自使用者選的圖表主題（設定裡可切換），故用函式而非常數。
+        const fundsKeys = ['tw', 'us', 'cash'];
+        const fundsSeriesDef = () => {
+            const p = window.getChartTheme().pie1;
+            return [
+                { key: 'tw',   label: '台股', color: p[0] },
+                { key: 'us',   label: '美股', color: p[1] },
+                { key: 'cash', label: '現金', color: p[2] }
+            ];
+        };
+        // 債券依市場歸入台股／美股；日股、韓股等其他市場不列入本圖
+        const fundsBucket = (r) => r.country === '台股' ? 'tw' : (r.country === '美股' ? 'us' : null);
         const fundsFmtDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         window.calcFundsSeries = function(range) {
             const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -1388,7 +1413,6 @@
                 let min = null;
                 const see = (s) => { if (!s) return; const d = new Date(s + 'T00:00:00'); if (!isNaN(d) && (!min || d < min)) min = d; };
                 window.buyRecords.forEach(r => see(r.date));
-                window.loanRecords.forEach(l => see(l.disburseDate || l.startDate));
                 window.cashRecords.forEach(c => see(c.date));
                 start = min || new Date(today.getTime() - 180 * 86400000);
             } else start = new Date(today.getTime() - (parseInt(range, 10) - 1) * 86400000);
@@ -1401,20 +1425,18 @@
 
             const buys = window.buyRecords
                 .map(r => ({ d: r.date || '', b: fundsBucket(r), cost: ((r.shares * r.buyPrice) + (r.fee || 0)) * (r.exchangeRate || window.exchangeRates[r.country] || 1) }))
-                .filter(x => x.d && x.cost > 0);
-            const series = {}; fundsSeriesDef.forEach(s => series[s.key] = []);
+                .filter(x => x.d && x.b && x.cost > 0);
+            const series = {}; fundsKeys.forEach(k => series[k] = []);
             iso.forEach(day => {
-                const acc = { tw: 0, bond: 0, us: 0, other: 0, loan: 0, cash: 0 };
+                const acc = { tw: 0, us: 0, cash: window.cashBalance(day) };
                 buys.forEach(x => { if (x.d <= day) acc[x.b] += x.cost; });
-                window.loanRecords.forEach(l => {
-                    const anchor = l.disburseDate || l.startDate;      // 撥款前不計入
-                    if (!anchor || anchor > day) return;
-                    acc.loan += window.simulateLoan(l, window.monthsBetween(l.startDate, day)).balance;
-                });
-                acc.cash = window.cashBalance(day);
-                fundsSeriesDef.forEach(s => series[s.key].push(Math.round(acc[s.key])));
+                fundsKeys.forEach(k => series[k].push(Math.round(acc[k])));
             });
             return { labels: iso, series };
+        };
+        // 目前貸款餘額（圖表不畫貸款，但總額旁仍標示）
+        window.currentLoanBalance = function() {
+            return window.loanRecords.reduce((a, l) => a + window.simulateLoan(l).balance, 0);
         };
         window.renderFundsChart = function() {
             // window.chartFundsFlow 在圖表建立前會是同名的 canvas 元素（瀏覽器行為），
@@ -1423,15 +1445,22 @@
             if (!window.chartsReady || !ch || typeof ch.update !== 'function') return;
             const rangeEl = document.getElementById('fundsRange');
             const d = window.calcFundsSeries(rangeEl ? rangeEl.value : '180');
-            const used = fundsSeriesDef.filter(s => d.series[s.key].some(v => Math.abs(v) > 0.5));
+            const used = fundsSeriesDef().filter(s => d.series[s.key].some(v => Math.abs(v) > 0.5));
             const last = (k) => { const a = d.series[k]; return a[a.length - 1] || 0; };
             ch.data.labels = d.labels.map(s => s.slice(5).replace('-', '/'));
             ch.data.datasets = used.map(s => ({ label: s.label, data: d.series[s.key], borderColor: s.color, backgroundColor: s.color, fill: true, pointRadius: 0, pointHoverRadius: 3, borderWidth: 1, tension: 0.25 }));
+            // 深色模式與主題可隨時切換，軸線與圖例顏色每次重畫都重新套用
+            const tick = document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b';
+            const grid = document.documentElement.classList.contains('dark') ? 'rgba(148,163,184,.15)' : 'rgba(100,116,139,.12)';
+            ch.options.plugins.legend.labels.color = tick;
+            ch.options.scales.x.ticks.color = tick;
+            ch.options.scales.y.ticks.color = tick;
+            ch.options.scales.y.grid.color = grid;
             ch.update();
             const el = document.getElementById('fundsTotalNow');
             if (el) {
-                const assets = ['tw', 'bond', 'us', 'other', 'cash'].reduce((a, k) => a + last(k), 0);
-                const loan = last('loan');
+                const assets = fundsKeys.reduce((a, k) => a + last(k), 0);
+                const loan = window.currentLoanBalance();
                 el.innerHTML = `${window.formatCurrency(assets, true)}${loan > 0 ? `<div class="text-xs font-normal text-red-500">貸款餘額 ${window.formatCurrency(loan, true)}</div>` : ''}`;
             }
         };
