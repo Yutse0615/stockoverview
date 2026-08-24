@@ -102,15 +102,15 @@
 
         <div class="flex justify-center mb-8">
             <div class="bg-gray-200 dark:bg-gray-800 p-1 rounded-full inline-flex shadow-inner">
-                <button onclick="window.switchPage('trade')" id="tab-trade" class="px-3 sm:px-6 py-2 rounded-full text-sm font-bold transition-all bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-300 shadow" data-i18n="tabTrade">庫存與交易</button>
+                <button onclick="window.switchPage('funds')" id="tab-funds" class="px-3 sm:px-6 py-2 rounded-full text-sm font-bold transition-all bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-300 shadow" data-i18n="tabFunds">資金總覽</button>
+                <button onclick="window.switchPage('trade')" id="tab-trade" class="px-3 sm:px-6 py-2 rounded-full text-sm font-bold transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700" data-i18n="tabTrade">庫存與交易</button>
                 <button onclick="window.switchPage('dividend')" id="tab-dividend" class="px-3 sm:px-6 py-2 rounded-full text-sm font-bold transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700" data-i18n="tabDiv">股息紀錄</button>
                 <button onclick="window.switchPage('exchange')" id="tab-exchange" class="px-3 sm:px-6 py-2 rounded-full text-sm font-bold transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700" data-i18n="tabExchange">換匯紀錄</button>
-                <button onclick="window.switchPage('funds')" id="tab-funds" class="px-3 sm:px-6 py-2 rounded-full text-sm font-bold transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700" data-i18n="tabFunds">資金總覽</button>
             </div>
         </div>
 
         <!-- 庫存與交易頁面 -->
-        <div id="page-trade" class="page-content active">
+        <div id="page-trade" class="page-content">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border dark:border-gray-700 flex flex-col items-center">
                     <h3 class="text-lg font-semibold text-gray-600 dark:text-gray-300 mb-2" data-i18n="chartCountry">股票國家比例</h3><div class="relative w-full h-72"><canvas id="chartCountry"></canvas></div>
@@ -309,7 +309,22 @@
         </div>
 
         <!-- ==================== 第四頁：資金總覽 ==================== -->
-        <div id="page-funds" class="page-content">
+        <div id="page-funds" class="page-content active">
+            <!-- 資金累積圖 -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700 mb-8">
+                <div class="flex flex-wrap items-end justify-between gap-4 mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold flex items-center dark:text-gray-200"><span class="text-indigo-500 mr-2">📊</span> 資金累積圖</h2>
+                        <p class="text-xs text-gray-400 mt-1">依投入成本計算：股票為買進成本×當時匯率，貸款為剩餘本金</p>
+                    </div>
+                    <div class="flex items-end gap-4">
+                        <div><label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">期間</label><select id="fundsRange" onchange="window.renderFundsChart()" class="h-[38px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white text-sm"><option value="30">近 30 天</option><option value="180" selected>近 6 個月</option><option value="365">近 1 年</option><option value="all">全部</option></select></div>
+                        <div class="text-right"><div class="text-xs text-gray-400">目前資產合計</div><div id="fundsTotalNow" class="text-2xl font-bold text-slate-700 dark:text-white">-</div></div>
+                    </div>
+                </div>
+                <div class="relative w-full h-80"><canvas id="chartFundsFlow"></canvas></div>
+            </div>
+
             <!-- 還款進度總覽 -->
             <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700 mb-8">
                 <div class="flex flex-col sm:flex-row items-center gap-6">
@@ -318,6 +333,31 @@
                 </div>
             </div>
 
+            <!-- 自有現金 -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-amber-100 dark:border-amber-900 border-t-4 border-t-amber-500 mb-8">
+                <h2 class="text-xl font-bold mb-4 flex items-center dark:text-gray-200"><span class="text-amber-500 mr-2">💵</span> 自有現金</h2>
+                <form id="cashForm" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                    <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">日期</label><input type="date" id="cashDate" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" required></div>
+                    <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">項目</label><input type="text" id="cashName" placeholder="如: 台幣活存" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" required></div>
+                    <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">金額 (台幣) <span class="text-xs text-gray-400">提領填負數</span></label><input type="number" step="1" id="cashAmount" placeholder="如: 500000 或 -50000" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" required></div>
+                    <div class="min-w-0 flex gap-2"><button type="submit" id="cashSubmitBtn" class="flex-1 h-[42px] bg-amber-500 hover:bg-amber-600 text-white font-bold rounded">新增</button><button type="button" id="cashCancelBtn" onclick="window.cancelEditCash()" class="hidden flex-1 h-[42px] bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 dark:text-white font-bold rounded">取消</button></div>
+                </form>
+                <div class="mt-6 overflow-x-auto border dark:border-gray-700 rounded-lg">
+                    <table class="w-full text-left border-collapse min-w-[560px] text-sm">
+                        <thead class="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600 text-gray-600 dark:text-gray-300"><tr><th class="p-3">日期</th><th class="p-3">項目</th><th class="p-3 text-right">金額</th><th class="p-3 text-right">累計餘額</th><th class="p-3 text-center">操作</th></tr></thead>
+                        <tbody id="cashTableBody" class="divide-y dark:divide-gray-700"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 貸款列表 -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-x-auto">
+                <h2 class="text-xl font-bold text-slate-700 dark:text-slate-200 mb-4">💰 貸款總覽</h2>
+                <table class="w-full text-left border-collapse min-w-[880px] text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600 text-gray-600 dark:text-gray-300"><tr><th class="p-3">名稱</th><th class="p-3">還款方式</th><th class="p-3 text-right">貸款總額</th><th class="p-3 text-right">利率</th><th class="p-3 text-right">年期</th><th class="p-3 text-right">每月繳款 (可改)</th><th class="p-3 text-right">已繳期數</th><th class="p-3 text-center">還款進度</th><th class="p-3 text-center">操作</th></tr></thead>
+                    <tbody id="loanTableBody" class="divide-y dark:divide-gray-700"></tbody>
+                </table>
+            </div>
             <!-- 貸款輸入 -->
             <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-indigo-100 dark:border-indigo-900 border-t-4 border-t-indigo-500 mb-8">
                 <h2 class="text-xl font-bold mb-4 flex items-center dark:text-gray-200"><span class="text-indigo-500 mr-2">🏦</span> 新增貸款</h2>
@@ -334,15 +374,6 @@
                     <div class="min-w-0"><label class="block text-sm mb-1 text-indigo-500">每月繳款 (試算/可改)</label><input type="number" step="1" id="loanMonthly" class="w-full h-[42px] px-3 border border-indigo-200 rounded bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300" required></div>
                     <div class="col-span-1 sm:col-span-2 md:col-span-4"><div id="loanCalcHint" class="text-xs text-gray-400 mb-2"></div><button type="submit" class="w-full h-[42px] bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded">新增貸款</button></div>
                 </form>
-            </div>
-
-            <!-- 貸款列表 -->
-            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-x-auto">
-                <h2 class="text-xl font-bold text-slate-700 dark:text-slate-200 mb-4">💰 貸款總覽</h2>
-                <table class="w-full text-left border-collapse min-w-[880px] text-sm">
-                    <thead class="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600 text-gray-600 dark:text-gray-300"><tr><th class="p-3">名稱</th><th class="p-3">還款方式</th><th class="p-3 text-right">貸款總額</th><th class="p-3 text-right">利率</th><th class="p-3 text-right">年期</th><th class="p-3 text-right">每月繳款 (可改)</th><th class="p-3 text-right">已繳期數</th><th class="p-3 text-center">還款進度</th><th class="p-3 text-center">操作</th></tr></thead>
-                    <tbody id="loanTableBody" class="divide-y dark:divide-gray-700"></tbody>
-                </table>
             </div>
         </div>
     </div> <!-- mainApp end -->
@@ -442,7 +473,7 @@
         if (firebaseConfig.apiKey) { try { const app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app); useCloud = true; } catch(e) {} }
 
         window.currentUserUid = null; window.currentUserName = null;
-        window.buyRecords = []; window.sellRecords = []; window.dividendRecords = []; window.customBrokers = []; window.feeSettings = []; window.exchangeHistory = []; window.loanRecords = [];
+        window.buyRecords = []; window.sellRecords = []; window.dividendRecords = []; window.customBrokers = []; window.feeSettings = []; window.exchangeHistory = []; window.loanRecords = []; window.cashRecords = [];
         window.defaultBuyNotes = ["定期定額", "逢低買進", "長期投資"]; window.defaultSellNotes = ["達到停利點", "達到停損點", "調整配置"]; window.customBuyNotes = []; window.customSellNotes = [];
         const defaultBrokers = ["元大", "富邦", "國泰", "凱基", "群益", "永豐金"];
         
@@ -672,13 +703,14 @@
             document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
             const target = document.getElementById('page-' + page); if (target) target.classList.add('active');
             const activeColor = { trade: 'text-blue-600 dark:text-blue-300', dividend: 'text-orange-500 dark:text-orange-300', exchange: 'text-cyan-600 dark:text-cyan-300', funds: 'text-indigo-600 dark:text-indigo-300' };
-            ['trade', 'dividend', 'exchange', 'funds'].forEach(k => {
+            ['funds', 'trade', 'dividend', 'exchange'].forEach(k => {
                 const el = document.getElementById('tab-' + k); if (!el) return;
                 el.className = (k === page)
                     ? `px-3 sm:px-6 py-2 rounded-full text-sm font-bold transition-all bg-white dark:bg-gray-600 shadow ${activeColor[k]}`
                     : 'px-3 sm:px-6 py-2 rounded-full text-sm font-bold transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700';
             });
             if (page === 'dividend') renderDividendNotifications();
+            if (page === 'funds') window.renderFundsChart();   // 分頁隱藏時 canvas 尺寸為 0，切回來要重畫
         }
         window.setViewMode = function(table, mode) { window.viewModes[table] = mode; window.updateAll(); }
 
@@ -686,7 +718,7 @@
         async function loadData() {
             if (!window.currentUserUid) return;
             if (useCloud) {
-                try { const docSnap = await getDoc(doc(db, 'users', window.currentUserUid)); if (docSnap.exists()) { const d = docSnap.data(); window.buyRecords = d.buyRecords||[]; window.sellRecords = d.sellRecords||[]; window.dividendRecords = d.dividendRecords||[]; window.customBrokers = d.customBrokers||[]; window.feeSettings = d.feeSettings||[]; window.exchangeHistory = d.exchangeHistory||[]; window.loanRecords = d.loanRecords||[]; if(d.exchangeRates) window.exchangeRates = d.exchangeRates; if(d.customBuyNotes) window.customBuyNotes = d.customBuyNotes; if(d.customSellNotes) window.customSellNotes = d.customSellNotes; if(d.chartTheme){ window.currentChartTheme = d.chartTheme; localStorage.setItem('stockTracker_chartTheme', d.chartTheme); } if(d.darkMode){ document.documentElement.classList.toggle('dark', d.darkMode==='dark'); localStorage.setItem('stockTracker_darkMode', d.darkMode); } } } catch(e){}
+                try { const docSnap = await getDoc(doc(db, 'users', window.currentUserUid)); if (docSnap.exists()) { const d = docSnap.data(); window.buyRecords = d.buyRecords||[]; window.sellRecords = d.sellRecords||[]; window.dividendRecords = d.dividendRecords||[]; window.customBrokers = d.customBrokers||[]; window.feeSettings = d.feeSettings||[]; window.exchangeHistory = d.exchangeHistory||[]; window.loanRecords = d.loanRecords||[]; window.cashRecords = d.cashRecords||[]; if(d.exchangeRates) window.exchangeRates = d.exchangeRates; if(d.customBuyNotes) window.customBuyNotes = d.customBuyNotes; if(d.customSellNotes) window.customSellNotes = d.customSellNotes; if(d.chartTheme){ window.currentChartTheme = d.chartTheme; localStorage.setItem('stockTracker_chartTheme', d.chartTheme); } if(d.darkMode){ document.documentElement.classList.toggle('dark', d.darkMode==='dark'); localStorage.setItem('stockTracker_darkMode', d.darkMode); } } } catch(e){}
             } else {
                 let uid = window.currentUserUid;
                 window.buyRecords = JSON.parse(localStorage.getItem('stockTracker_'+uid+'_buy')) || JSON.parse(localStorage.getItem('stockTracker_'+uid+'_buyRecords')) || JSON.parse(localStorage.getItem('stockTracker_buyRecords')) || [];
@@ -695,13 +727,14 @@
                 window.feeSettings = JSON.parse(localStorage.getItem('stockTracker_'+uid+'_feeSettings')) || JSON.parse(localStorage.getItem('stockTracker_feeSettings')) || [];
                 window.exchangeHistory = JSON.parse(localStorage.getItem('stockTracker_'+uid+'_exHist')) || [];
                 window.loanRecords = JSON.parse(localStorage.getItem('stockTracker_'+uid+'_loans')) || [];
+                window.cashRecords = JSON.parse(localStorage.getItem('stockTracker_'+uid+'_cash')) || [];
             }
         }
 
         async function saveData() {
             if (!window.currentUserUid) return;
-            if (useCloud) { try { await setDoc(doc(db, 'users', window.currentUserUid), { buyRecords: window.buyRecords, sellRecords: window.sellRecords, dividendRecords: window.dividendRecords, customBrokers: window.customBrokers, feeSettings: window.feeSettings, exchangeRates: window.exchangeRates, exchangeHistory: window.exchangeHistory, loanRecords: window.loanRecords, customBuyNotes: window.customBuyNotes, customSellNotes: window.customSellNotes, chartTheme: window.currentChartTheme, darkMode: (document.documentElement.classList.contains('dark') ? 'dark' : 'light') }, {merge:true}); } catch(e){} }
-            else { let uid = window.currentUserUid; localStorage.setItem('stockTracker_'+uid+'_buy', JSON.stringify(window.buyRecords)); localStorage.setItem('stockTracker_'+uid+'_sell', JSON.stringify(window.sellRecords)); localStorage.setItem('stockTracker_'+uid+'_div', JSON.stringify(window.dividendRecords)); localStorage.setItem('stockTracker_'+uid+'_feeSettings', JSON.stringify(window.feeSettings)); localStorage.setItem('stockTracker_'+uid+'_exHist', JSON.stringify(window.exchangeHistory)); localStorage.setItem('stockTracker_'+uid+'_loans', JSON.stringify(window.loanRecords)); }
+            if (useCloud) { try { await setDoc(doc(db, 'users', window.currentUserUid), { buyRecords: window.buyRecords, sellRecords: window.sellRecords, dividendRecords: window.dividendRecords, customBrokers: window.customBrokers, feeSettings: window.feeSettings, exchangeRates: window.exchangeRates, exchangeHistory: window.exchangeHistory, loanRecords: window.loanRecords, cashRecords: window.cashRecords, customBuyNotes: window.customBuyNotes, customSellNotes: window.customSellNotes, chartTheme: window.currentChartTheme, darkMode: (document.documentElement.classList.contains('dark') ? 'dark' : 'light') }, {merge:true}); } catch(e){} }
+            else { let uid = window.currentUserUid; localStorage.setItem('stockTracker_'+uid+'_buy', JSON.stringify(window.buyRecords)); localStorage.setItem('stockTracker_'+uid+'_sell', JSON.stringify(window.sellRecords)); localStorage.setItem('stockTracker_'+uid+'_div', JSON.stringify(window.dividendRecords)); localStorage.setItem('stockTracker_'+uid+'_feeSettings', JSON.stringify(window.feeSettings)); localStorage.setItem('stockTracker_'+uid+'_exHist', JSON.stringify(window.exchangeHistory)); localStorage.setItem('stockTracker_'+uid+'_loans', JSON.stringify(window.loanRecords)); localStorage.setItem('stockTracker_'+uid+'_cash', JSON.stringify(window.cashRecords)); }
         }
 
         window.calcSellBuyPrice = function() {
@@ -723,7 +756,7 @@
         const getDisplayName = (sym, cty) => (cty === '台股' && window.stockDict[sym]) ? `${sym} ${window.stockDict[sym]}` : sym;
 
         window.updateAll = function() { 
-            window.updateBrokerDropdowns(); window.updateNoteDropdowns(); window.renderFeeRulesTable(); window.renderExchangeHistTable(); window.renderLoanTable();
+            window.updateBrokerDropdowns(); window.updateNoteDropdowns(); window.renderFeeRulesTable(); window.renderExchangeHistTable(); window.renderLoanTable(); window.renderCashTable(); window.renderFundsChart();
             document.querySelectorAll('[data-i18n]').forEach(el => { const k = el.getAttribute('data-i18n'); if (translations[window.currentLang] && translations[window.currentLang][k]) el.innerHTML = translations[window.currentLang][k]; });
             ['buy', 'sell', 'div'].forEach(t => { const isSum = window.viewModes[t] === 'summary'; const bs = document.getElementById(`btn${t.charAt(0).toUpperCase() + t.slice(1)}Summary`); const bd = document.getElementById(`btn${t.charAt(0).toUpperCase() + t.slice(1)}Detail`); if(bs && bd) { bs.className = isSum ? "bg-white shadow text-blue-600 px-3 py-1 text-xs font-bold rounded" : "text-gray-500 hover:text-gray-700 px-3 py-1 text-xs font-bold rounded"; bd.className = isSum ? "text-gray-500 hover:text-gray-700 px-3 py-1 text-xs font-bold rounded" : "bg-white shadow text-blue-600 px-3 py-1 text-xs font-bold rounded"; } });
             renderTables(); window.updateDropdowns(); renderCharts();
@@ -869,7 +902,24 @@
                 if (disburseDate && new Date(disburseDate) > new Date(startDate)) return showToast("❌ 撥款日不可晚於首次繳款日");
                 window.loanRecords.push({ id: Date.now(), name, amount, rate, years, method, graceYears, startDate, disburseDate, monthly, dayCount, prepayments: [] });
                 this.reset(); document.getElementById("loanGrace").value = 0; window.handleLoanMethodChange();
-                saveData(); window.renderLoanTable(); showToast("✅ 貸款已新增");
+                saveData(); window.renderLoanTable(); window.renderFundsChart(); showToast("✅ 貸款已新增");
+            });
+
+            // 資金總覽：自有現金（新增／更新同一個表單）
+            document.getElementById("cashForm").addEventListener("submit", function(e) {
+                e.preventDefault();
+                const editId = window.editingCashId;
+                const date = document.getElementById("cashDate").value;
+                const name = document.getElementById("cashName").value.trim();
+                const amount = parseFloat(document.getElementById("cashAmount").value);
+                if (!date || !name) return showToast("❌ 請填寫日期與項目");
+                if (isNaN(amount) || amount === 0) return showToast("❌ 金額需填寫且不可為 0（提領請填負數）");
+                const rec = { id: editId || Date.now(), date, name, amount };
+                if (editId) { const i = window.cashRecords.findIndex(x => x.id === editId); if (i >= 0) window.cashRecords[i] = rec; else window.cashRecords.push(rec); }
+                else window.cashRecords.push(rec);
+                window.cancelEditCash();
+                saveData(); window.renderCashTable(); window.renderFundsChart();
+                showToast(editId ? "✅ 現金紀錄已更新" : "✅ 現金紀錄已新增");
             });
 
             // 資金總覽：新增提前還款
@@ -1273,7 +1323,118 @@
             l.prepayments = (l.prepayments || []).filter(p => p.id !== pid);
             saveData(); window.renderPrepayModal(); window.renderLoanTable(); showToast("🗑️ 已刪除提前還款");
         };
-        window.deleteLoan = function(id) { window.loanRecords = window.loanRecords.filter(l => l.id !== id); saveData(); window.renderLoanTable(); showToast("🗑️ 已刪除貸款"); };
+        window.deleteLoan = function(id) { window.loanRecords = window.loanRecords.filter(l => l.id !== id); saveData(); window.renderLoanTable(); window.renderFundsChart(); showToast("🗑️ 已刪除貸款"); };
+
+        // ===== 自有現金 =====
+        window.editingCashId = null;
+        // 截至 uptoDate（含）的現金餘額；ISO 日期字串可直接字典序比較
+        window.cashBalance = function(uptoDate) {
+            return window.cashRecords.reduce((s, r) => (!uptoDate || (r.date || '') <= uptoDate) ? s + (parseFloat(r.amount) || 0) : s, 0);
+        };
+        window.editCash = function(id) {
+            const r = window.cashRecords.find(x => x.id === id); if (!r) return;
+            window.editingCashId = id;
+            document.getElementById('cashDate').value = r.date || '';
+            document.getElementById('cashName').value = r.name || '';
+            document.getElementById('cashAmount').value = r.amount;
+            document.getElementById('cashSubmitBtn').textContent = '更新';
+            document.getElementById('cashCancelBtn').classList.remove('hidden');
+            document.getElementById('cashForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            showToast('✏️ 請在上方修改後按「更新」');
+        };
+        window.cancelEditCash = function() {
+            window.editingCashId = null;
+            document.getElementById('cashForm').reset();
+            document.getElementById('cashSubmitBtn').textContent = '新增';
+            document.getElementById('cashCancelBtn').classList.add('hidden');
+        };
+        window.deleteCash = function(id) {
+            window.cashRecords = window.cashRecords.filter(x => x.id !== id);
+            if (window.editingCashId === id) window.cancelEditCash();
+            saveData(); window.renderCashTable(); window.renderFundsChart(); showToast('🗑️ 已刪除');
+        };
+        window.renderCashTable = function() {
+            const tb = document.getElementById('cashTableBody'); if (!tb) return;
+            const asc = [...window.cashRecords].sort((a, b) => (a.date || '').localeCompare(b.date || '') || a.id - b.id);
+            let run = 0; const runMap = {};
+            asc.forEach(r => { run += parseFloat(r.amount) || 0; runMap[r.id] = run; });
+            tb.innerHTML = asc.reverse().map(r => {
+                const amt = parseFloat(r.amount) || 0;
+                const cls = amt >= 0 ? 'text-profit' : 'text-loss';
+                return `<tr class="hover:bg-gray-100 dark:hover:bg-gray-600"><td class="p-3">${r.date}</td><td class="p-3 dark:text-gray-200">${r.name || '-'}</td><td class="p-3 text-right font-mono ${cls}">${amt >= 0 ? '+' : ''}${window.formatCurrency(amt)}</td><td class="p-3 text-right font-mono dark:text-gray-200">${window.formatCurrency(runMap[r.id])}</td><td class="p-3 text-center whitespace-nowrap"><button onclick="window.editCash(${r.id})" class="text-xs bg-blue-50 text-blue-500 px-2 py-1 rounded mr-1">修改</button><button onclick="window.deleteCash(${r.id})" class="text-xs bg-red-50 text-red-500 px-2 py-1 rounded">刪除</button></td></tr>`;
+            }).join('') || `<tr><td colspan="5" class="p-6 text-center text-sm text-gray-400">尚無現金紀錄，請在上方新增 💵</td></tr>`;
+        };
+
+        // ===== 資金累積圖 =====
+        // 歷史市價沒有留存，故一律以「投入成本」為基準：
+        //   台股／債券／美股 = 買進成本 × 當時匯率。注意只計目前仍持有的部位，
+        //   已全數賣出的舊部位在 buyRecords 中已被移除、無買進日可回溯。
+        //   貸款 = 該時點的剩餘本金；現金 = 該時點的累計餘額。
+        const fundsSeriesDef = [
+            { key: 'tw',    label: '台股', color: '#16a34a' },
+            { key: 'bond',  label: '債券', color: '#38bdf8' },
+            { key: 'us',    label: '美股', color: '#1e40af' },
+            { key: 'other', label: '其他', color: '#94a3b8' },
+            { key: 'loan',  label: '貸款', color: '#ef4444' },
+            { key: 'cash',  label: '現金', color: '#f59e0b' }
+        ];
+        // 債券跨市場，故先抽出來自成一類，其餘再依市場分
+        const fundsBucket = (r) => r.type === '債券' ? 'bond' : (r.country === '台股' ? 'tw' : (r.country === '美股' ? 'us' : 'other'));
+        const fundsFmtDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        window.calcFundsSeries = function(range) {
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            let start;
+            if (range === 'all') {
+                let min = null;
+                const see = (s) => { if (!s) return; const d = new Date(s + 'T00:00:00'); if (!isNaN(d) && (!min || d < min)) min = d; };
+                window.buyRecords.forEach(r => see(r.date));
+                window.loanRecords.forEach(l => see(l.disburseDate || l.startDate));
+                window.cashRecords.forEach(c => see(c.date));
+                start = min || new Date(today.getTime() - 180 * 86400000);
+            } else start = new Date(today.getTime() - (parseInt(range, 10) - 1) * 86400000);
+            if (start > today) start = today;
+            const span = Math.max(1, Math.round((today - start) / 86400000));
+            const pts = Math.max(2, Math.min(60, span + 1));   // 最多 60 個點，長區間自動抽樣
+            const iso = [];
+            for (let i = 0; i < pts; i++) iso.push(fundsFmtDate(new Date(start.getTime() + Math.round(i * span / (pts - 1)) * 86400000)));
+            iso[pts - 1] = fundsFmtDate(today);
+
+            const buys = window.buyRecords
+                .map(r => ({ d: r.date || '', b: fundsBucket(r), cost: ((r.shares * r.buyPrice) + (r.fee || 0)) * (r.exchangeRate || window.exchangeRates[r.country] || 1) }))
+                .filter(x => x.d && x.cost > 0);
+            const series = {}; fundsSeriesDef.forEach(s => series[s.key] = []);
+            iso.forEach(day => {
+                const acc = { tw: 0, bond: 0, us: 0, other: 0, loan: 0, cash: 0 };
+                buys.forEach(x => { if (x.d <= day) acc[x.b] += x.cost; });
+                window.loanRecords.forEach(l => {
+                    const anchor = l.disburseDate || l.startDate;      // 撥款前不計入
+                    if (!anchor || anchor > day) return;
+                    acc.loan += window.simulateLoan(l, window.monthsBetween(l.startDate, day)).balance;
+                });
+                acc.cash = window.cashBalance(day);
+                fundsSeriesDef.forEach(s => series[s.key].push(Math.round(acc[s.key])));
+            });
+            return { labels: iso, series };
+        };
+        window.renderFundsChart = function() {
+            // window.chartFundsFlow 在圖表建立前會是同名的 canvas 元素（瀏覽器行為），
+            // 不能只用真假值判斷，必須靠 chartsReady。
+            const ch = window.chartFundsFlow;
+            if (!window.chartsReady || !ch || typeof ch.update !== 'function') return;
+            const rangeEl = document.getElementById('fundsRange');
+            const d = window.calcFundsSeries(rangeEl ? rangeEl.value : '180');
+            const used = fundsSeriesDef.filter(s => d.series[s.key].some(v => Math.abs(v) > 0.5));
+            const last = (k) => { const a = d.series[k]; return a[a.length - 1] || 0; };
+            ch.data.labels = d.labels.map(s => s.slice(5).replace('-', '/'));
+            ch.data.datasets = used.map(s => ({ label: s.label, data: d.series[s.key], borderColor: s.color, backgroundColor: s.color, fill: true, pointRadius: 0, pointHoverRadius: 3, borderWidth: 1, tension: 0.25 }));
+            ch.update();
+            const el = document.getElementById('fundsTotalNow');
+            if (el) {
+                const assets = ['tw', 'bond', 'us', 'other', 'cash'].reduce((a, k) => a + last(k), 0);
+                const loan = last('loan');
+                el.innerHTML = `${window.formatCurrency(assets, true)}${loan > 0 ? `<div class="text-xs font-normal text-red-500">貸款餘額 ${window.formatCurrency(loan, true)}</div>` : ''}`;
+            }
+        };
         window.renderLoanTable = function() {
             const tb = document.getElementById('loanTableBody'); if (!tb) return;
             let totAmt = 0, totPaid = 0, totMonthly = 0;
@@ -1368,8 +1529,17 @@
 
         Chart.register(ChartDataLabels); Chart.register({ id: 'centerText', beforeDraw: function(c) { if (c.config.type !== 'doughnut') return; let cx = c.ctx; let a = c.chartArea; if (!a) return; let cX = (a.left + a.right)/2; let cY = (a.top + a.bottom)/2; cx.restore(); let fs = ((a.bottom-a.top)/160).toFixed(2); cx.font = "bold "+fs+"em sans-serif"; cx.textBaseline = "middle"; cx.textAlign = "center"; cx.fillStyle = document.documentElement.classList.contains('dark')?"#f1f5f9":"#475569"; let t = c.customNetTotal!==undefined?c.customNetTotal:(c.data.datasets[0].data.length>0?c.data.datasets[0].data.reduce((a,b)=>a+(b||0),0):0); cx.fillText(window.formatCurrency(Math.round(t),true), cX, cY-10); let sfs = ((a.bottom-a.top)/300).toFixed(2); cx.font = "normal "+sfs+"em sans-serif"; cx.fillStyle = "#94a3b8"; cx.fillText(c.customSubtitle||window.t('cTotal'), cX, cY+22); cx.save(); } });
         function getPOpts() { return { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, color: document.documentElement.classList.contains('dark')?'#e2e8f0':'#475569', generateLabels: function(c) { const d=c.data; if(!d.labels.length)return []; return d.labels.map((l,i)=>{ const s=c.getDatasetMeta(0).controller.getStyle(i); const v=d.datasets[0].data[i]||0; const t=d.datasets[0].data.reduce((a,b)=>a+(b||0),0); const p=t>0?Math.round((v/t)*100):0; return {text:`${l} (${p}%)`, fillStyle:s.backgroundColor, strokeStyle:s.borderColor, lineWidth:s.borderWidth, hidden:isNaN(v)||c.getDatasetMeta(0).data[i].hidden, index:i};});}}}, datalabels: { display: false }, tooltip: { callbacks: { label: function(c) { const t=c.dataset.data.reduce((a,b)=>a+(b||0),0); const p=t>0?Math.round((c.raw/t)*100):0; return ` ${c.label}: ${window.formatCurrency(Math.round(c.raw),true)} (${p}%)`; } } } } }; }
-        window.destroyAllCharts = function() { window.chartsReady = false; ['chartCountry','chartAssetType','chartUnrealized','chartRealized','chartDivBroker','chartDivCountry'].forEach(id => { if(window[id] && typeof window[id].destroy === 'function'){window[id].destroy();window[id]=null;} }); }
-        function initCharts() { window.destroyAllCharts(); window.chartCountry = new Chart(document.getElementById('chartCountry'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartAssetType = new Chart(document.getElementById('chartAssetType'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartUnrealized = new Chart(document.getElementById('chartUnrealized'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartRealized = new Chart(document.getElementById('chartRealized'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartDivBroker = new Chart(document.getElementById('chartDivBroker'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartDivCountry = new Chart(document.getElementById('chartDivCountry'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartsReady = true; }
+        function getFundsOpts() {
+            const dark = document.documentElement.classList.contains('dark');
+            const tick = dark ? '#94a3b8' : '#64748b', grid = dark ? 'rgba(148,163,184,.15)' : 'rgba(100,116,139,.12)';
+            return { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, color: tick } }, datalabels: { display: false },
+                    tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${window.formatCurrency(Math.round(c.parsed.y), true)}` } } },
+                scales: { x: { stacked: true, grid: { display: false }, ticks: { color: tick, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
+                          y: { stacked: true, grid: { color: grid }, ticks: { color: tick, callback: (v) => window.formatCurrency(v, true) } } } };
+        }
+        window.destroyAllCharts = function() { window.chartsReady = false; ['chartCountry','chartAssetType','chartUnrealized','chartRealized','chartDivBroker','chartDivCountry','chartFundsFlow'].forEach(id => { if(window[id] && typeof window[id].destroy === 'function'){window[id].destroy();window[id]=null;} }); }
+        function initCharts() { window.destroyAllCharts(); window.chartCountry = new Chart(document.getElementById('chartCountry'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartAssetType = new Chart(document.getElementById('chartAssetType'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartUnrealized = new Chart(document.getElementById('chartUnrealized'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartRealized = new Chart(document.getElementById('chartRealized'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartDivBroker = new Chart(document.getElementById('chartDivBroker'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartDivCountry = new Chart(document.getElementById('chartDivCountry'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartFundsFlow = new Chart(document.getElementById('chartFundsFlow'), {type:'line',data:{labels:[],datasets:[]},options:getFundsOpts()}); window.chartsReady = true; window.renderFundsChart(); }
         function renderCharts() {
             if (!window.chartsReady) return; // 圖表尚未初始化（如登入頁切換語言時），直接略過。注意 window.chartCountry 會與 canvas#chartCountry 元素同名，不可用來判斷
             const _theme = window.getChartTheme(); const mP1 = _theme.pie1; const mP2 = _theme.pie2; const bP = _theme.broker; let bCM = {}; let bCI = 0; function getBC(n) { if(!bCM[n]) { bCM[n]=bP[bCI%bP.length]; bCI++; } return bCM[n]; }
