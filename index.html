@@ -394,6 +394,12 @@
                     <div class="flex items-center justify-between py-2"><span class="text-sm dark:text-gray-300" data-i18n="settingsChartTheme">圖表主題色</span>
                         <select id="chartThemeSelect" onchange="window.setChartTheme(this.value)" class="h-[40px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white text-sm"></select>
                     </div>
+                    <div class="flex items-center justify-between py-2"><span class="text-sm dark:text-gray-300">資金圖層次分隔線</span>
+                        <label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="fundsDividerToggle" class="sr-only peer" onchange="window.setFundsDivider(this.checked)"><div class="w-11 h-6 bg-gray-300 dark:bg-gray-600 peer-checked:bg-blue-600 rounded-full transition-colors"></div><div class="absolute left-0.5 top-0.5 bg-white w-5 h-5 rounded-full shadow transition-transform peer-checked:translate-x-5"></div></label>
+                    </div>
+                    <div class="flex items-center justify-between py-2 transition-opacity" id="fundsDividerOpacityRow"><span class="text-sm dark:text-gray-300">分隔線深淺</span>
+                        <div class="flex items-center gap-2"><input type="range" id="fundsDividerOpacity" min="10" max="100" step="5" oninput="window.setFundsDividerOpacity(this.value, false)" onchange="window.setFundsDividerOpacity(this.value, true)" class="w-32 accent-blue-600"><span id="fundsDividerOpacityVal" class="text-xs text-gray-400 w-9 text-right">60%</span></div>
+                    </div>
                 </div>
                 <div>
                     <h3 class="text-xs font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1" data-i18n="settingsPrefs">偏好</h3>
@@ -514,6 +520,34 @@
 
         // ===== 深色模式 =====
         window.setDarkMode = function(isDark) { document.documentElement.classList.toggle('dark', isDark); localStorage.setItem('stockTracker_darkMode', isDark ? 'dark' : 'light'); if (window.currentUserUid) saveData(); if (window.chartsReady) window.updateAll(); };
+        // 資金累積圖的層間分隔線：預設關閉（純色塊比較好看），開啟後可調深淺
+        window.fundsDivider = (() => {
+            try {
+                const s = JSON.parse(localStorage.getItem('stockTracker_fundsDivider'));
+                if (s && typeof s.on === 'boolean') return { on: s.on, opacity: Math.min(1, Math.max(0.1, parseFloat(s.opacity) || 0.6)) };
+            } catch (e) {}
+            return { on: false, opacity: 0.6 };
+        })();
+        function syncFundsDividerUI() {
+            const tg = document.getElementById('fundsDividerToggle'); if (tg) tg.checked = window.fundsDivider.on;
+            const sl = document.getElementById('fundsDividerOpacity'); if (sl) { sl.value = Math.round(window.fundsDivider.opacity * 100); sl.disabled = !window.fundsDivider.on; }
+            const lab = document.getElementById('fundsDividerOpacityVal'); if (lab) lab.textContent = Math.round(window.fundsDivider.opacity * 100) + '%';
+            const row = document.getElementById('fundsDividerOpacityRow'); if (row) row.classList.toggle('opacity-40', !window.fundsDivider.on);
+        }
+        function persistFundsDivider() {
+            localStorage.setItem('stockTracker_fundsDivider', JSON.stringify(window.fundsDivider));
+            if (window.currentUserUid) saveData();
+        }
+        window.setFundsDivider = function(on) {
+            window.fundsDivider.on = !!on;
+            syncFundsDividerUI(); window.renderFundsChart(); persistFundsDivider();
+        };
+        // 拖曳中即時預覽（persist=false），放開時才寫入，避免每個 input 事件都打一次雲端
+        window.setFundsDividerOpacity = function(v, persist) {
+            window.fundsDivider.opacity = Math.min(1, Math.max(0.1, (parseFloat(v) || 60) / 100));
+            syncFundsDividerUI(); window.renderFundsChart();
+            if (persist) persistFundsDivider();
+        };
         // ===== 圖表主題配色 =====
         window.currentChartTheme = localStorage.getItem('stockTracker_chartTheme') || 'morandi';
         window.chartThemes = {
@@ -528,6 +562,7 @@
         window.openSettings = function() {
             const dt = document.getElementById('darkModeToggle'); if (dt) dt.checked = document.documentElement.classList.contains('dark');
             const cts = document.getElementById('chartThemeSelect'); if (cts) { cts.innerHTML = Object.keys(window.chartThemes).map(k => `<option value="${k}">${window.chartThemes[k].name}</option>`).join(''); cts.value = window.currentChartTheme; }
+            syncFundsDividerUI();
             const ls = document.getElementById('langSelect'); if (ls) ls.value = window.currentLang;
             const cs = document.getElementById('currencySelect'); if (cs) cs.value = window.currentCurrency;
             const nn = document.getElementById('settingsNickname'); if (nn) nn.value = window.currentUserName || '';
@@ -741,7 +776,7 @@
         async function loadData() {
             if (!window.currentUserUid) return;
             if (useCloud) {
-                try { const docSnap = await getDoc(doc(db, 'users', window.currentUserUid)); if (docSnap.exists()) { const d = docSnap.data(); window.buyRecords = d.buyRecords||[]; window.sellRecords = d.sellRecords||[]; window.dividendRecords = d.dividendRecords||[]; window.customBrokers = d.customBrokers||[]; window.feeSettings = d.feeSettings||[]; window.exchangeHistory = d.exchangeHistory||[]; window.loanRecords = d.loanRecords||[]; window.cashRecords = d.cashRecords||[]; if(d.exchangeRates) window.exchangeRates = d.exchangeRates; if(d.customBuyNotes) window.customBuyNotes = d.customBuyNotes; if(d.customSellNotes) window.customSellNotes = d.customSellNotes; if(d.chartTheme){ window.currentChartTheme = d.chartTheme; localStorage.setItem('stockTracker_chartTheme', d.chartTheme); } if(d.darkMode){ document.documentElement.classList.toggle('dark', d.darkMode==='dark'); localStorage.setItem('stockTracker_darkMode', d.darkMode); } } } catch(e){}
+                try { const docSnap = await getDoc(doc(db, 'users', window.currentUserUid)); if (docSnap.exists()) { const d = docSnap.data(); window.buyRecords = d.buyRecords||[]; window.sellRecords = d.sellRecords||[]; window.dividendRecords = d.dividendRecords||[]; window.customBrokers = d.customBrokers||[]; window.feeSettings = d.feeSettings||[]; window.exchangeHistory = d.exchangeHistory||[]; window.loanRecords = d.loanRecords||[]; window.cashRecords = d.cashRecords||[]; if(d.exchangeRates) window.exchangeRates = d.exchangeRates; if(d.customBuyNotes) window.customBuyNotes = d.customBuyNotes; if(d.customSellNotes) window.customSellNotes = d.customSellNotes; if(d.chartTheme){ window.currentChartTheme = d.chartTheme; localStorage.setItem('stockTracker_chartTheme', d.chartTheme); } if(d.fundsDivider && typeof d.fundsDivider.on === 'boolean'){ window.fundsDivider = { on: d.fundsDivider.on, opacity: Math.min(1, Math.max(0.1, parseFloat(d.fundsDivider.opacity) || 0.6)) }; localStorage.setItem('stockTracker_fundsDivider', JSON.stringify(window.fundsDivider)); } if(d.darkMode){ document.documentElement.classList.toggle('dark', d.darkMode==='dark'); localStorage.setItem('stockTracker_darkMode', d.darkMode); } } } catch(e){}
             } else {
                 let uid = window.currentUserUid;
                 window.buyRecords = JSON.parse(localStorage.getItem('stockTracker_'+uid+'_buy')) || JSON.parse(localStorage.getItem('stockTracker_'+uid+'_buyRecords')) || JSON.parse(localStorage.getItem('stockTracker_buyRecords')) || [];
@@ -756,7 +791,7 @@
 
         async function saveData() {
             if (!window.currentUserUid) return;
-            if (useCloud) { try { await setDoc(doc(db, 'users', window.currentUserUid), { buyRecords: window.buyRecords, sellRecords: window.sellRecords, dividendRecords: window.dividendRecords, customBrokers: window.customBrokers, feeSettings: window.feeSettings, exchangeRates: window.exchangeRates, exchangeHistory: window.exchangeHistory, loanRecords: window.loanRecords, cashRecords: window.cashRecords, customBuyNotes: window.customBuyNotes, customSellNotes: window.customSellNotes, chartTheme: window.currentChartTheme, darkMode: (document.documentElement.classList.contains('dark') ? 'dark' : 'light') }, {merge:true}); } catch(e){} }
+            if (useCloud) { try { await setDoc(doc(db, 'users', window.currentUserUid), { buyRecords: window.buyRecords, sellRecords: window.sellRecords, dividendRecords: window.dividendRecords, customBrokers: window.customBrokers, feeSettings: window.feeSettings, exchangeRates: window.exchangeRates, exchangeHistory: window.exchangeHistory, loanRecords: window.loanRecords, cashRecords: window.cashRecords, customBuyNotes: window.customBuyNotes, customSellNotes: window.customSellNotes, chartTheme: window.currentChartTheme, fundsDivider: window.fundsDivider, darkMode: (document.documentElement.classList.contains('dark') ? 'dark' : 'light') }, {merge:true}); } catch(e){} }
             else { let uid = window.currentUserUid; localStorage.setItem('stockTracker_'+uid+'_buy', JSON.stringify(window.buyRecords)); localStorage.setItem('stockTracker_'+uid+'_sell', JSON.stringify(window.sellRecords)); localStorage.setItem('stockTracker_'+uid+'_div', JSON.stringify(window.dividendRecords)); localStorage.setItem('stockTracker_'+uid+'_feeSettings', JSON.stringify(window.feeSettings)); localStorage.setItem('stockTracker_'+uid+'_exHist', JSON.stringify(window.exchangeHistory)); localStorage.setItem('stockTracker_'+uid+'_loans', JSON.stringify(window.loanRecords)); localStorage.setItem('stockTracker_'+uid+'_cash', JSON.stringify(window.cashRecords)); }
         }
 
@@ -1474,9 +1509,11 @@
             const dark = document.documentElement.classList.contains('dark');
             const tick = dark ? '#94a3b8' : '#64748b';
             const grid = dark ? 'rgba(148,163,184,.15)' : 'rgba(100,116,139,.12)';
-            // 相鄰兩層在低對比主題（如莫蘭迪）下顏色可能很接近，用卡片底色描邊把層次分開
-            const edge = dark ? '#1f2937' : '#ffffff';
-            ch.data.datasets = used.map(s => ({ label: s.label, data: d.series[s.key], borderColor: edge, backgroundColor: s.color, fill: true, pointRadius: 0, pointHoverRadius: 3, borderWidth: 1.5, tension: 0.25 }));
+            // 分隔線預設關閉：描邊直接用該層底色，看起來就是純色塊。
+            // 開啟時改用卡片底色描邊（可在設定調深淺），把低對比主題下相鄰的層次分開。
+            const dv = window.fundsDivider || { on: false, opacity: 0.6 };
+            const edgeRGB = dark ? '31,41,55' : '255,255,255';
+            ch.data.datasets = used.map(s => ({ label: s.label, data: d.series[s.key], borderColor: dv.on ? `rgba(${edgeRGB},${dv.opacity})` : s.color, backgroundColor: s.color, fill: true, pointRadius: 0, pointHoverRadius: 3, borderWidth: dv.on ? 1.5 : 1, tension: 0.25 }));
             ch.options.plugins.legend.labels.color = tick;
             ch.options.scales.x.ticks.color = tick;
             ch.options.scales.y.ticks.color = tick;
