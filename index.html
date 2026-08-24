@@ -315,7 +315,7 @@
                 <div class="flex flex-wrap items-end justify-between gap-4 mb-4">
                     <div>
                         <h2 class="text-xl font-bold flex items-center dark:text-gray-200"><span class="text-indigo-500 mr-2">📊</span> 資金累積圖</h2>
-                        <p class="text-xs text-gray-400 mt-1">依投入成本計算：股票為買進成本×當時匯率，現金為累計餘額</p>
+                        <p class="text-xs text-gray-400 mt-1">由下而上：現金 → 台股成本 → 美股成本 → 未實現損益（以目前股價計算），最上緣即現金＋市值</p>
                     </div>
                     <div class="flex items-end gap-4">
                         <div><label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">期間</label><select id="fundsRange" onchange="window.renderFundsChart()" class="h-[38px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white text-sm"><option value="30">近 30 天</option><option value="180" selected>近 6 個月</option><option value="365">近 1 年</option><option value="all">全部</option></select></div>
@@ -1389,18 +1389,24 @@
         };
 
         // ===== 資金累積圖 =====
-        // 歷史市價沒有留存，故一律以「投入成本」為基準：
-        //   台股／美股 = 買進成本 × 當時匯率。注意只計目前仍持有的部位，
-        //   已全數賣出的舊部位在 buyRecords 中已被移除、無買進日可回溯。
-        //   現金 = 該時點的累計餘額。
+        // 由下而上：現金 → 台股成本 → 美股成本 → 未實現損益，
+        // 所以最上緣 = 現金 + 目前市值，與庫存總覽的市值總額對得起來。
+        //   台股／美股 = 買進成本 × 當時匯率（債券依市場歸入，不另立一類）
+        //   未實現損益 = 市值(扣估算賣出費) − 成本，分組方式與庫存總覽一致
+        //   現金 = 該時點的累計餘額
+        // 兩個先天限制：
+        //   1. 歷史市價沒有留存，未實現損益一律以「目前股價」計算，因此過去
+        //      各點是「當時持有的部位、以現價衡量」，不是當時的真實損益。
+        //   2. 已全數賣出的部位在 buyRecords 中已被移除、無買進日可回溯。
         // 顏色取自使用者選的圖表主題（設定裡可切換），故用函式而非常數。
-        const fundsKeys = ['tw', 'us', 'cash'];
+        const fundsKeys = ['cash', 'tw', 'us', 'unreal'];
         const fundsSeriesDef = () => {
             const p = window.getChartTheme().pie1;
             return [
-                { key: 'tw',   label: '台股', color: p[0] },
-                { key: 'us',   label: '美股', color: p[1] },
-                { key: 'cash', label: '現金', color: p[2] }
+                { key: 'cash',   label: '現金',       color: p[2] },
+                { key: 'tw',     label: '台股',       color: p[0] },
+                { key: 'us',     label: '美股',       color: p[1] },
+                { key: 'unreal', label: '未實現損益', color: p[3] }
             ];
         };
         // 債券依市場歸入台股／美股；日股、韓股等其他市場不列入本圖
@@ -1423,20 +1429,36 @@
             for (let i = 0; i < pts; i++) iso.push(fundsFmtDate(new Date(start.getTime() + Math.round(i * span / (pts - 1)) * 86400000)));
             iso[pts - 1] = fundsFmtDate(today);
 
-            const buys = window.buyRecords
-                .map(r => ({ d: r.date || '', b: fundsBucket(r), cost: ((r.shares * r.buyPrice) + (r.fee || 0)) * (r.exchangeRate || window.exchangeRates[r.country] || 1) }))
-                .filter(x => x.d && x.b && x.cost > 0);
+            const dR = window.getCurrencyRate();   // 顯示幣別；金額一律先算成台幣再換算
+            // 依「券商＋標的」分組，賣出費用（含低消）以合併股數一次估算，與庫存總覽一致
+            const groups = {};
+            window.buyRecords.forEach(r => {
+                if (!r.date || !fundsBucket(r)) return;
+                const gk = `${r.broker}|${r.symbol}|${r.country}|${r.type}`;
+                if (!groups[gk]) groups[gk] = { broker: r.broker, country: r.country, type: r.type, cp: r.currentPrice, lots: [] };
+                groups[gk].cp = r.currentPrice;
+                groups[gk].lots.push({ d: r.date, shares: r.shares, cost: ((r.shares * r.buyPrice) + (r.fee || 0)) * (r.exchangeRate || window.exchangeRates[r.country] || 1) });
+            });
             const series = {}; fundsKeys.forEach(k => series[k] = []);
             iso.forEach(day => {
-                const acc = { tw: 0, us: 0, cash: window.cashBalance(day) };
-                buys.forEach(x => { if (x.d <= day) acc[x.b] += x.cost; });
+                const acc = { cash: window.cashBalance(day) / dR, tw: 0, us: 0, unreal: 0 };
+                Object.values(groups).forEach(g => {
+                    let sh = 0, cost = 0;
+                    g.lots.forEach(l => { if (l.d <= day) { sh += l.shares; cost += l.cost; } });
+                    if (sh <= 0) return;
+                    const b = fundsBucket(g);
+                    acc[b] += cost / dR;
+                    const eSF = window.calcTransactionFee(g.broker, g.country, g.type, sh, g.cp, true).totalFee;
+                    const mv = ((sh * g.cp) - eSF) * (window.exchangeRates[g.country] || 1) / dR;
+                    acc.unreal += mv - cost / dR;
+                });
                 fundsKeys.forEach(k => series[k].push(Math.round(acc[k])));
             });
             return { labels: iso, series };
         };
-        // 目前貸款餘額（圖表不畫貸款，但總額旁仍標示）
+        // 目前貸款餘額（圖表不畫貸款，但總額旁仍標示）。台幣金額，依顯示幣別換算。
         window.currentLoanBalance = function() {
-            return window.loanRecords.reduce((a, l) => a + window.simulateLoan(l).balance, 0);
+            return window.loanRecords.reduce((a, l) => a + window.simulateLoan(l).balance, 0) / window.getCurrencyRate();
         };
         window.renderFundsChart = function() {
             // window.chartFundsFlow 在圖表建立前會是同名的 canvas 元素（瀏覽器行為），
