@@ -1470,14 +1470,18 @@
             const used = fundsSeriesDef().filter(s => d.series[s.key].some(v => Math.abs(v) > 0.5));
             const last = (k) => { const a = d.series[k]; return a[a.length - 1] || 0; };
             ch.data.labels = d.labels.map(s => s.slice(5).replace('-', '/'));
-            ch.data.datasets = used.map(s => ({ label: s.label, data: d.series[s.key], borderColor: s.color, backgroundColor: s.color, fill: true, pointRadius: 0, pointHoverRadius: 3, borderWidth: 1, tension: 0.25 }));
             // 深色模式與主題可隨時切換，軸線與圖例顏色每次重畫都重新套用
-            const tick = document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b';
-            const grid = document.documentElement.classList.contains('dark') ? 'rgba(148,163,184,.15)' : 'rgba(100,116,139,.12)';
+            const dark = document.documentElement.classList.contains('dark');
+            const tick = dark ? '#94a3b8' : '#64748b';
+            const grid = dark ? 'rgba(148,163,184,.15)' : 'rgba(100,116,139,.12)';
+            // 相鄰兩層在低對比主題（如莫蘭迪）下顏色可能很接近，用卡片底色描邊把層次分開
+            const edge = dark ? '#1f2937' : '#ffffff';
+            ch.data.datasets = used.map(s => ({ label: s.label, data: d.series[s.key], borderColor: edge, backgroundColor: s.color, fill: true, pointRadius: 0, pointHoverRadius: 3, borderWidth: 1.5, tension: 0.25 }));
             ch.options.plugins.legend.labels.color = tick;
             ch.options.scales.x.ticks.color = tick;
             ch.options.scales.y.ticks.color = tick;
             ch.options.scales.y.grid.color = grid;
+            ch.options.scales.y.beginAtZero = true;
             ch.update();
             const el = document.getElementById('fundsTotalNow');
             if (el) {
@@ -1587,7 +1591,8 @@
                 plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, color: tick } }, datalabels: { display: false },
                     tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${window.formatCurrency(Math.round(c.parsed.y), true)}` } } },
                 scales: { x: { stacked: true, grid: { display: false }, ticks: { color: tick, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
-                          y: { stacked: true, grid: { color: grid }, ticks: { color: tick, callback: (v) => window.formatCurrency(v, true) } } } };
+                          // 必須從 0 起算，否則最底層（現金）會被切在軸線下方而看不見
+                          y: { stacked: true, beginAtZero: true, grid: { color: grid }, ticks: { color: tick, callback: (v) => window.formatCurrency(v, true) } } } };
         }
         window.destroyAllCharts = function() { window.chartsReady = false; ['chartCountry','chartAssetType','chartUnrealized','chartRealized','chartDivBroker','chartDivCountry','chartFundsFlow'].forEach(id => { if(window[id] && typeof window[id].destroy === 'function'){window[id].destroy();window[id]=null;} }); }
         function initCharts() { window.destroyAllCharts(); window.chartCountry = new Chart(document.getElementById('chartCountry'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartAssetType = new Chart(document.getElementById('chartAssetType'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartUnrealized = new Chart(document.getElementById('chartUnrealized'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartRealized = new Chart(document.getElementById('chartRealized'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartDivBroker = new Chart(document.getElementById('chartDivBroker'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartDivCountry = new Chart(document.getElementById('chartDivCountry'), {type:'doughnut',data:{labels:[],datasets:[{data:[]}]},options:getPOpts()}); window.chartFundsFlow = new Chart(document.getElementById('chartFundsFlow'), {type:'line',data:{labels:[],datasets:[]},options:getFundsOpts()}); window.chartsReady = true; window.renderFundsChart(); }
