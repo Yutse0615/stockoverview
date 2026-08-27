@@ -324,7 +324,7 @@
                     </div>
                 </div>
                 <div class="relative w-full h-80"><canvas id="chartFundsFlow"></canvas></div>
-                <p class="text-xs text-gray-400 mt-3">由下而上：現金 → 台股成本 → 美股成本 → 未實現損益（以目前股價計算），最上緣即現金＋市值</p>
+                <p class="text-xs text-gray-400 mt-3">由下而上：現金 → 台股成本 → 美股成本 → 未實現損益（以目前股價計算）。買進時錢從現金移到股票、賣出時回到現金，最上緣即目前總資產。<span id="fundsCashWarn" class="text-loss"></span></p>
             </div>
 
             <!-- 還款進度總覽 -->
@@ -1542,6 +1542,24 @@
                 return s + (parseFloat(r.amount) || 0) * window.accountRate(r.accountId ? window.accountCurrency(r.accountId) : 'TWD');
             }, 0);
         };
+        // 截至某日的實際可用現金（台幣）＝ 自有現金收支 − 買進支出 ＋ 賣出收入。
+        // 與資金累積圖的股票成本層互補：買股票時錢從現金移到股票，總額不變。
+        // 這裡不分帳戶，未指定帳戶的交易一樣列入計算。
+        window.cashAt = function(uptoDate) {
+            let bal = window.cashBalance(uptoDate);
+            window.buyRecords.forEach(r => {
+                if (!r.date || (uptoDate && r.date > uptoDate)) return;
+                bal -= ((r.shares * r.buyPrice) + (r.fee || 0)) * (r.exchangeRate || window.exchangeRates[r.country] || 1);
+            });
+            window.sellRecords.forEach(r => {
+                if (!r.date || (uptoDate && r.date > uptoDate)) return;
+                const sR = r.exchangeRate || window.exchangeRates[r.country] || 1;
+                bal += ((r.shares * r.sellPrice) - (r.fee || 0)) * sR;
+                // 同 accountBalance：有代入庫存時買入紀錄已被扣股數，成本要在此補扣
+                if (r.linkedBuy) bal -= (r.buyTotal || 0) * (r.buyExchangeRate || sR);
+            });
+            return bal;
+        };
         window.editCash = function(id) {
             const r = window.cashRecords.find(x => x.id === id); if (!r) return;
             window.editingCashId = id;
@@ -1638,7 +1656,7 @@
             });
             const series = {}; fundsKeys.forEach(k => series[k] = []);
             iso.forEach(day => {
-                const acc = { cash: window.cashBalance(day) / dR, tw: 0, us: 0, unreal: 0 };
+                const acc = { cash: window.cashAt(day) / dR, tw: 0, us: 0, unreal: 0 };
                 Object.values(groups).forEach(g => {
                     let sh = 0, cost = 0;
                     g.lots.forEach(l => { if (l.d <= day) { sh += l.shares; cost += l.cost; } });
@@ -1683,6 +1701,9 @@
             ch.options.scales.y.beginAtZero = true;
             ch.options.scales.y.ticks.callback = (v, i, ticks) => fundsAxisTick(v, ticks);
             ch.update();
+            // 現金為負代表買股票的錢沒有對應的現金收支紀錄，提醒使用者補登
+            const warn = document.getElementById('fundsCashWarn');
+            if (warn) warn.textContent = d.series.cash.some(v => v < 0) ? '　⚠️ 現金為負，表示買進金額超過已登錄的現金收支，請到下方補登入帳紀錄。' : '';
             const el = document.getElementById('fundsTotalNow');
             if (el) {
                 const assets = fundsKeys.reduce((a, k) => a + last(k), 0);
