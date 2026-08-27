@@ -349,7 +349,15 @@
                 </form>
 
                 <!-- 現金收支 -->
-                <h3 class="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2 pt-4 border-t dark:border-gray-700">現金收支</h3>
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-4 border-t dark:border-gray-700 mb-1">
+                    <h3 class="text-sm font-bold text-gray-500 dark:text-gray-400">現金收支</h3>
+                    <div class="flex items-center gap-2 text-xs">
+                        <label class="text-gray-500 dark:text-gray-400">資金圖現金連動起始日</label>
+                        <input type="date" id="cashLinkFrom" onchange="window.setCashLinkFrom(this.value)" class="h-[34px] px-2 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white text-xs">
+                        <button type="button" onclick="window.setCashLinkFrom('')" class="px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">全部連動</button>
+                    </div>
+                </div>
+                <p id="cashLinkHint" class="text-xs text-gray-400 mb-3"></p>
                 <form id="cashForm" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 items-end">
                     <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">日期</label><input type="date" id="cashDate" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" required></div>
                     <div class="min-w-0"><label class="block text-sm mb-1 dark:text-gray-300">帳戶</label><select id="cashAccount" onchange="window.syncCashAmountLabel()" class="w-full h-[42px] px-3 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white account-dropdown"></select></div>
@@ -791,7 +799,7 @@
         async function loadData() {
             if (!window.currentUserUid) return;
             if (useCloud) {
-                try { const docSnap = await getDoc(doc(db, 'users', window.currentUserUid)); if (docSnap.exists()) { const d = docSnap.data(); window.buyRecords = d.buyRecords||[]; window.sellRecords = d.sellRecords||[]; window.dividendRecords = d.dividendRecords||[]; window.customBrokers = d.customBrokers||[]; window.feeSettings = d.feeSettings||[]; window.exchangeHistory = d.exchangeHistory||[]; window.loanRecords = d.loanRecords||[]; window.cashRecords = d.cashRecords||[]; window.cashAccounts = d.cashAccounts||[]; if(d.exchangeRates) window.exchangeRates = d.exchangeRates; if(d.customBuyNotes) window.customBuyNotes = d.customBuyNotes; if(d.customSellNotes) window.customSellNotes = d.customSellNotes; if(d.chartTheme){ window.currentChartTheme = d.chartTheme; localStorage.setItem('stockTracker_chartTheme', d.chartTheme); } if(d.fundsDivider && typeof d.fundsDivider.on === 'boolean'){ window.fundsDivider = { on: d.fundsDivider.on, opacity: Math.min(1, Math.max(0.1, parseFloat(d.fundsDivider.opacity) || 0.6)) }; localStorage.setItem('stockTracker_fundsDivider', JSON.stringify(window.fundsDivider)); } if(d.darkMode){ document.documentElement.classList.toggle('dark', d.darkMode==='dark'); localStorage.setItem('stockTracker_darkMode', d.darkMode); } } } catch(e){}
+                try { const docSnap = await getDoc(doc(db, 'users', window.currentUserUid)); if (docSnap.exists()) { const d = docSnap.data(); window.buyRecords = d.buyRecords||[]; window.sellRecords = d.sellRecords||[]; window.dividendRecords = d.dividendRecords||[]; window.customBrokers = d.customBrokers||[]; window.feeSettings = d.feeSettings||[]; window.exchangeHistory = d.exchangeHistory||[]; window.loanRecords = d.loanRecords||[]; window.cashRecords = d.cashRecords||[]; window.cashAccounts = d.cashAccounts||[]; if(typeof d.cashLinkFrom === 'string'){ window.cashLinkFrom = d.cashLinkFrom; localStorage.setItem('stockTracker_cashLinkFrom', d.cashLinkFrom); } if(d.exchangeRates) window.exchangeRates = d.exchangeRates; if(d.customBuyNotes) window.customBuyNotes = d.customBuyNotes; if(d.customSellNotes) window.customSellNotes = d.customSellNotes; if(d.chartTheme){ window.currentChartTheme = d.chartTheme; localStorage.setItem('stockTracker_chartTheme', d.chartTheme); } if(d.fundsDivider && typeof d.fundsDivider.on === 'boolean'){ window.fundsDivider = { on: d.fundsDivider.on, opacity: Math.min(1, Math.max(0.1, parseFloat(d.fundsDivider.opacity) || 0.6)) }; localStorage.setItem('stockTracker_fundsDivider', JSON.stringify(window.fundsDivider)); } if(d.darkMode){ document.documentElement.classList.toggle('dark', d.darkMode==='dark'); localStorage.setItem('stockTracker_darkMode', d.darkMode); } } } catch(e){}
             } else {
                 let uid = window.currentUserUid;
                 window.buyRecords = JSON.parse(localStorage.getItem('stockTracker_'+uid+'_buy')) || JSON.parse(localStorage.getItem('stockTracker_'+uid+'_buyRecords')) || JSON.parse(localStorage.getItem('stockTracker_buyRecords')) || [];
@@ -807,7 +815,7 @@
 
         async function saveData() {
             if (!window.currentUserUid) return;
-            if (useCloud) { try { await setDoc(doc(db, 'users', window.currentUserUid), { buyRecords: window.buyRecords, sellRecords: window.sellRecords, dividendRecords: window.dividendRecords, customBrokers: window.customBrokers, feeSettings: window.feeSettings, exchangeRates: window.exchangeRates, exchangeHistory: window.exchangeHistory, loanRecords: window.loanRecords, cashRecords: window.cashRecords, cashAccounts: window.cashAccounts, customBuyNotes: window.customBuyNotes, customSellNotes: window.customSellNotes, chartTheme: window.currentChartTheme, fundsDivider: window.fundsDivider, darkMode: (document.documentElement.classList.contains('dark') ? 'dark' : 'light') }, {merge:true}); } catch(e){} }
+            if (useCloud) { try { await setDoc(doc(db, 'users', window.currentUserUid), { buyRecords: window.buyRecords, sellRecords: window.sellRecords, dividendRecords: window.dividendRecords, customBrokers: window.customBrokers, feeSettings: window.feeSettings, exchangeRates: window.exchangeRates, exchangeHistory: window.exchangeHistory, loanRecords: window.loanRecords, cashRecords: window.cashRecords, cashAccounts: window.cashAccounts, cashLinkFrom: window.cashLinkFrom, customBuyNotes: window.customBuyNotes, customSellNotes: window.customSellNotes, chartTheme: window.currentChartTheme, fundsDivider: window.fundsDivider, darkMode: (document.documentElement.classList.contains('dark') ? 'dark' : 'light') }, {merge:true}); } catch(e){} }
             else { let uid = window.currentUserUid; localStorage.setItem('stockTracker_'+uid+'_buy', JSON.stringify(window.buyRecords)); localStorage.setItem('stockTracker_'+uid+'_sell', JSON.stringify(window.sellRecords)); localStorage.setItem('stockTracker_'+uid+'_div', JSON.stringify(window.dividendRecords)); localStorage.setItem('stockTracker_'+uid+'_feeSettings', JSON.stringify(window.feeSettings)); localStorage.setItem('stockTracker_'+uid+'_exHist', JSON.stringify(window.exchangeHistory)); localStorage.setItem('stockTracker_'+uid+'_loans', JSON.stringify(window.loanRecords)); localStorage.setItem('stockTracker_'+uid+'_cash', JSON.stringify(window.cashRecords)); localStorage.setItem('stockTracker_'+uid+'_accounts', JSON.stringify(window.cashAccounts)); }
         }
 
@@ -830,7 +838,7 @@
         const getDisplayName = (sym, cty) => (cty === '台股' && window.stockDict[sym]) ? `${sym} ${window.stockDict[sym]}` : sym;
 
         window.updateAll = function() { 
-            window.updateBrokerDropdowns(); window.updateNoteDropdowns(); window.renderFeeRulesTable(); window.renderExchangeHistTable(); window.updateAccountDropdowns(); window.renderAccountCards(); window.renderLoanTable(); window.renderCashTable(); window.renderFundsChart(); window.renderPriceUpdateHint();
+            window.updateBrokerDropdowns(); window.updateNoteDropdowns(); window.renderFeeRulesTable(); window.renderExchangeHistTable(); window.updateAccountDropdowns(); window.renderAccountCards(); window.syncCashLinkUI(); window.renderLoanTable(); window.renderCashTable(); window.renderFundsChart(); window.renderPriceUpdateHint();
             document.querySelectorAll('[data-i18n]').forEach(el => { const k = el.getAttribute('data-i18n'); if (translations[window.currentLang] && translations[window.currentLang][k]) el.innerHTML = translations[window.currentLang][k]; });
             ['buy', 'sell', 'div'].forEach(t => { const isSum = window.viewModes[t] === 'summary'; const bs = document.getElementById(`btn${t.charAt(0).toUpperCase() + t.slice(1)}Summary`); const bd = document.getElementById(`btn${t.charAt(0).toUpperCase() + t.slice(1)}Detail`); if(bs && bd) { bs.className = isSum ? "bg-white shadow text-blue-600 px-3 py-1 text-xs font-bold rounded" : "text-gray-500 hover:text-gray-700 px-3 py-1 text-xs font-bold rounded"; bd.className = isSum ? "text-gray-500 hover:text-gray-700 px-3 py-1 text-xs font-bold rounded" : "bg-white shadow text-blue-600 px-3 py-1 text-xs font-bold rounded"; } });
             renderTables(); window.updateDropdowns(); renderCharts();
@@ -1542,17 +1550,45 @@
                 return s + (parseFloat(r.amount) || 0) * window.accountRate(r.accountId ? window.accountCurrency(r.accountId) : 'TWD');
             }, 0);
         };
+        // 資金圖現金連動的起始日：此日之前的買賣不計入現金增減。
+        // 用途是接軌——現金功能上線前的交易多半沒有對應的現金收支紀錄，
+        // 若全部連動現金會變成一大筆負數。空字串代表全部連動。
+        // 尚未設定過（null）時，自動以「第一次載入的當天」為起始日並記住。
+        window.cashLinkFrom = (() => {
+            const v = localStorage.getItem('stockTracker_cashLinkFrom');
+            if (v !== null) return v;
+            const d = new Date();
+            const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            localStorage.setItem('stockTracker_cashLinkFrom', today);
+            return today;
+        })();
+        window.setCashLinkFrom = function(v) {
+            window.cashLinkFrom = v || '';
+            localStorage.setItem('stockTracker_cashLinkFrom', window.cashLinkFrom);
+            if (window.currentUserUid) saveData();
+            window.syncCashLinkUI(); window.renderFundsChart();
+            showToast(window.cashLinkFrom ? `✅ ${window.cashLinkFrom} 起才連動現金` : '✅ 已改為全部連動');
+        };
+        window.syncCashLinkUI = function() {
+            const inp = document.getElementById('cashLinkFrom'); if (inp) inp.value = window.cashLinkFrom || '';
+            const hint = document.getElementById('cashLinkHint');
+            if (hint) hint.textContent = window.cashLinkFrom
+                ? `資金圖的「現金」層只把 ${window.cashLinkFrom} 起的買賣算進增減，之前的交易不影響現金。帳戶餘額不受此設定影響。`
+                : '資金圖的「現金」層會把所有買賣都算進增減。若早期交易沒有對應的現金收支紀錄，現金可能為負。';
+        };
         // 截至某日的實際可用現金（台幣）＝ 自有現金收支 − 買進支出 ＋ 賣出收入。
         // 與資金累積圖的股票成本層互補：買股票時錢從現金移到股票，總額不變。
         // 這裡不分帳戶，未指定帳戶的交易一樣列入計算。
         window.cashAt = function(uptoDate) {
             let bal = window.cashBalance(uptoDate);
+            const from = window.cashLinkFrom || '';
+            const inRange = (r) => r.date && r.date >= from && (!uptoDate || r.date <= uptoDate);
             window.buyRecords.forEach(r => {
-                if (!r.date || (uptoDate && r.date > uptoDate)) return;
+                if (!inRange(r)) return;
                 bal -= ((r.shares * r.buyPrice) + (r.fee || 0)) * (r.exchangeRate || window.exchangeRates[r.country] || 1);
             });
             window.sellRecords.forEach(r => {
-                if (!r.date || (uptoDate && r.date > uptoDate)) return;
+                if (!inRange(r)) return;
                 const sR = r.exchangeRate || window.exchangeRates[r.country] || 1;
                 bal += ((r.shares * r.sellPrice) - (r.fee || 0)) * sR;
                 // 同 accountBalance：有代入庫存時買入紀錄已被扣股數，成本要在此補扣
@@ -1703,7 +1739,7 @@
             ch.update();
             // 現金為負代表買股票的錢沒有對應的現金收支紀錄，提醒使用者補登
             const warn = document.getElementById('fundsCashWarn');
-            if (warn) warn.textContent = d.series.cash.some(v => v < 0) ? '　⚠️ 現金為負，表示買進金額超過已登錄的現金收支，請到下方補登入帳紀錄。' : '';
+            if (warn) warn.textContent = d.series.cash.some(v => v < 0) ? '　⚠️ 現金為負，表示買進金額超過已登錄的現金收支。請補登入帳紀錄，或調整下方的「現金連動起始日」。' : '';
             const el = document.getElementById('fundsTotalNow');
             if (el) {
                 const assets = fundsKeys.reduce((a, k) => a + last(k), 0);
